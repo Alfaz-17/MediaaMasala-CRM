@@ -8,25 +8,10 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  // Debugging in production
-  if (process.env.NODE_ENV === 'production') {
-    console.log('[Auth Middleware] URL:', req.originalUrl);
-    console.log('[Auth Middleware] Authorization Header Present:', !!authHeader);
-    console.log('[Auth Middleware] Token Present:', !!token);
-    if (!token) {
-      console.log('[Auth Middleware] Headers Received:', JSON.stringify(req.headers, null, 2));
-    }
-  }
-
   if (!token) return res.status(401).json({ message: 'Authentication token required' });
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      if (process.env.NODE_ENV === 'production') {
-        console.error('[Auth Middleware] JWT Verify Error:', err.message);
-      }
-      return res.status(403).json({ message: 'Invalid or expired token' });
-    }
+    if (err) return res.status(403).json({ message: 'Invalid or expired token' });
     (req as any).user = user;
     next();
   });

@@ -186,10 +186,13 @@ export function LayoutShell({ children }: LayoutShellProps) {
            <div className="flex items-center gap-3">
              <Sheet>
                <SheetTrigger asChild>
-                 <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9">
-                   <Menu className="h-5 w-5" />
-                   <span className="sr-only">Toggle Menu</span>
-                 </Button>
+                 <div className="relative group lg:hidden">
+                   <div className="absolute -inset-1.5 bg-indigo-500/10 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                   <Button variant="ghost" size="icon" className="relative h-11 w-11 border-2 border-indigo-600/10 bg-white dark:bg-slate-950 shadow-md hover:bg-slate-50 dark:hover:bg-slate-900 transition-all active:scale-90 rounded-xl flex items-center justify-center">
+                     <Menu className="h-6 w-6 text-indigo-600" strokeWidth={2.5} />
+                     <span className="sr-only">Toggle Menu</span>
+                   </Button>
+                 </div>
                </SheetTrigger>
                 <SheetContent side="left" className="p-0 w-[260px] border-0 shadow-2xl bg-[#FFFFFF] dark:bg-[#020617] ring-0 outline-none">
                   <SidebarContent 
@@ -203,6 +206,16 @@ export function LayoutShell({ children }: LayoutShellProps) {
                   />
                 </SheetContent>
              </Sheet>
+
+             <div className="lg:hidden flex items-center gap-3 ml-2 mr-2">
+               <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 text-white h-9 w-9 rounded-xl flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-500/20 shadow-indigo-500 border border-white/20">
+                 M
+               </div>
+               <div className="flex flex-col">
+                 <span className="font-bold text-[14px] tracking-tight text-slate-900 dark:text-white leading-none">Media Masala</span>
+                 <span className="text-[9px] text-indigo-500/80 font-bold uppercase tracking-wider mt-1 hidden xs:block">Enterprise CRM</span>
+               </div>
+             </div>
 
              <div className="hidden sm:flex items-center gap-2">
                <div className="text-muted-foreground/40 font-medium text-[10px] uppercase tracking-widest px-1">App</div>

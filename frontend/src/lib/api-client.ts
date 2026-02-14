@@ -8,12 +8,6 @@ async function getAuthHeaders() {
   const session = await getSession()
   const token = (session?.user as any)?.accessToken
   
-  if (process.env.NODE_ENV === 'production') {
-    console.log('[apiClient] API_BASE_URL:', API_BASE_URL);
-    console.log('[apiClient] Session exists:', !!session);
-    console.log('[apiClient] Token exists in session:', !!token);
-  }
-
   return {
     "Authorization": token ? `Bearer ${token}` : "",
     "Content-Type": "application/json",
