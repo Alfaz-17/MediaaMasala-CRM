@@ -1,0 +1,3 @@
+error TS6059: File 'C:/Users/alfaz/OneDrive/Desktop/Media-masala projects/Mediaa-masala-CRM/backend/scripts/crm-test-scenario.ts' is not under 'rootDir' 'C:/Users/alfaz/OneDrive/Desktop/Media-masala projects/Mediaa-masala-CRM/backend/src'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Matched by include pattern 'scripts/**/*' in 'C:/Users/alfaz/OneDrive/Desktop/Media-masala projects/Mediaa-masala-CRM/backend/tsconfig.json'

@@ -1,0 +1,970 @@
+# CRM System - Phased Development Guide (SIMPLIFIED)
+
+**Project:** Medium-Range CRM for Software Company  
+**Target:** 50-150 employees  
+**Platform:** Web application only  
+**Timeline:** 6 months (3 phases)  
+**Priority:** Leads & Tasks modules FIRST
+
+---
+
+## QUICK OVERVIEW
+
+### System Purpose
+A web-based CRM to manage:
+- Sales leads and pipeline
+- Daily tasks and assignments
+- Client projects
+- Company products (internal development)
+- Daily EOD reports
+- Attendance and leave
+- Employee management
+- Department-wise permissions
+
+
+
+## PHASE 1: FOUNDATION + LEADS + TASKS (2 months)
+
+### What We're Building in Phase 1
+1. User login system
+2. Basic employee management
+3. **Leads module (COMPLETE)**
+4. **Tasks module (COMPLETE)**
+5. Simple role-based permissions
+6. Basic dashboard
+
+### Why This Order?
+- Leads & Tasks are urgent priority
+- They're the foundation for other modules
+- Can start using the system immediately
+
+---
+
+## PHASE 1 DETAILED BREAKDOWN
+
+### STEP 1.1: Database Setup (Week 1)
+
+**Tables to Create:**
+
+```sql
+-- 1. Users table (for login)
+users (
+  id, email, password_hash, 
+  role_id, department_id, is_active
+)
+
+-- 2. Employees table
+employees (
+  id, emp_id, user_id, first_name, last_name, 
+  email, phone, department_id, role_id, 
+  manager_id, joining_date
+)
+
+-- 3. Departments table (NEW)
+departments (
+  id, name, code, description, is_active
+)
+
+-- 4. Roles table (NEW)
+roles (
+  id, name, code, description, is_active
+)
+
+-- 5. Permissions table (NEW - Granular permissions)
+permissions (
+  id, module, action, scope_type, description
+)
+
+-- 6. Role Permissions table (NEW - Many-to-many mapping)
+role_permissions (
+  id, role_id, permission_id
+)
+
+-- 7. Leads table
+leads (
+  id, name, email, phone, company, 
+  source, status, owner_id, 
+  department_id, created_at
+)
+
+-- 8. Tasks table
+tasks (
+  id, title, description, assignee_id, 
+  creator_id, due_date, priority, 
+  status, related_to_lead_id, created_at
+)
+```
+
+**Sample Data to Insert:**
+```sql
+-- Departments: 'Sales', 'Development', 'Product', 'HR'
+-- Roles: 'Admin', 'Manager', 'Employee' (+ custom roles via UI)
+-- Employee ID: Auto-generated (EMP001, EMP002, etc.)
+-- Lead Status: 'New', 'Contacted', 'Qualified', 'Converted', 'Lost'
+-- Task Status: 'Pending', 'In Progress', 'Completed', 'Cancelled'
+-- Task Priority: 'High', 'Medium', 'Low'
+-- Permission Modules: 'leads', 'tasks', 'employees', 'reports', 'settings'
+-- Permission Actions: 'view', 'create', 'edit', 'delete', 'assign'
+-- Permission Scopes: 'own', 'team', 'department', 'all'
+```
+
+---
+
+### STEP 1.2: Authentication System (Week 1)
+
+**What to Build:**
+
+```
+LOGIN FLOW:
+-----------
+1. User enters email & password
+2. Backend checks database
+3. If valid: Generate JWT token with user info + permissions
+4. Send token to frontend
+5. Frontend stores token in localStorage
+6. Use token for all future API calls
+
+API Endpoints:
+POST /api/auth/login
+POST /api/auth/logout
+```
+
+**Login API Response:**
+```json
+{
+  "token": "eyJhbGci...",
+  "user": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@company.com",
+    "role": "Manager",
+    "department": "Sales"
+  },
+  "permissions": {
+    "leads": { "view": "team", "create": true, "edit": "team" },
+    "tasks": { "view": "team", "create": true, "edit": "team" }
+  }
+}
+```
+
+**Frontend:**
+- Login page
+- Store token & user info
+- Redirect to dashboard
+
+---
+
+### STEP 1.3: Simple Permission System (Week 1)
+
+**Permission Scopes:**
+- `own` - Only own records
+- `team` - Team members' records (who report to you)
+- `department` - All department records
+- `all` - Everything
+
+**Permission Rules:**
+
+| Role | Leads View | Leads Create | Leads Edit | Tasks View | Tasks Create |
+|------|-----------|--------------|------------|-----------|--------------|
+| Admin | all | ✓ | all | all | ✓ |
+| Manager | team | ✓ | team | team | ✓ |
+| Employee | own | ✓ | own | own | ✓ |
+
+**How It Works:**
+1. Login API sends permissions in response
+2. Frontend checks permissions before showing buttons
+3. Backend checks permissions before executing actions
+
+---
+
+### STEP 1.4: LEADS MODULE (Week 2-3)
+
+#### LEADS - Database & API
+
+**API Endpoints:**
+```
+GET    /api/leads          - Get all leads (filtered by scope)
+POST   /api/leads          - Create new lead
+GET    /api/leads/:id      - Get one lead
+PUT    /api/leads/:id      - Update lead
+DELETE /api/leads/:id      - Delete lead
+PUT    /api/leads/:id/assign - Assign to someone
+```
+
+**Create Lead Flow:**
+```
+FRONTEND:
+1. User clicks "Create Lead" button
+2. Show form with fields:
+   - Name* (text)
+   - Email* (email)
+   - Phone (text)
+   - Company (text)
+   - Source* (dropdown: Website/Referral/Cold Call/Email)
+   - Notes (textarea)
+3. User fills form and clicks "Save"
+4. Send POST request to /api/leads
+
+BACKEND:
+1. Check if user has "create" permission → if NO: return 403
+2. Validate form data
+3. Insert into database with:
+   - owner_id = current user ID
+   - department = current user's department
+   - status = 'New'
+4. Return success with lead ID
+
+FRONTEND:
+5. Show success message
+6. Redirect to leads list OR lead detail page
+```
+
+**Get Leads Flow:**
+```
+FRONTEND:
+1. Page loads
+2. Send GET request to /api/leads
+
+BACKEND:
+1. Check permission scope
+2. If scope = "own": Get leads WHERE owner_id = current user
+3. If scope = "team": Get leads WHERE owner_id IN (team members)
+4. If scope = "department": Get leads WHERE department = user's dept
+5. If scope = "all": Get all leads
+6. Return filtered leads
+
+FRONTEND:
+3. Display leads in table with columns:
+   - Name
+   - Company
+   - Email
+   - Status
+   - Owner
+   - Created Date
+   - Actions (Edit/Delete buttons - shown based on permissions)
+```
+
+**Update Lead Status Flow:**
+```
+FRONTEND:
+1. User opens a lead
+2. User changes status dropdown
+3. Status transitions allowed:
+   - New → Contacted
+   - Contacted → Qualified
+   - Qualified → Converted
+   - Any → Lost
+4. If status = "Lost": Show reason dropdown (Budget/Timeline/Competition)
+5. Send PUT request
+
+BACKEND:
+1. Check edit permission
+2. Check scope (can user edit this lead?)
+3. Update status
+4. If status = "Converted": 
+   - Can link to project later (Phase 2)
+5. Return success
+
+FRONTEND:
+6. Update UI
+7. Show success message
+```
+
+**Assign Lead Flow:**
+```
+FRONTEND:
+1. User clicks "Assign" button on a lead
+2. Show modal with employee dropdown
+3. Load employees based on permission:
+   - If scope = "team": Show team members
+   - If scope = "department": Show dept members
+4. User selects employee and clicks "Assign"
+
+BACKEND:
+1. Check "assign" permission
+2. Update lead owner_id
+3. Send notification to new owner (Phase 2 feature)
+4. Return success
+
+FRONTEND:
+5. Close modal
+6. Refresh lead data
+7. Show success message
+```
+
+#### LEADS - Frontend Pages
+
+**Page 1: Leads List**
+```
+URL: /leads
+
+Layout:
+┌─────────────────────────────────────────────┐
+│ [+ Create Lead]  [Filters▼]  [Search...]   │
+├─────────────────────────────────────────────┤
+│ Name      Company    Status    Owner   Actions│
+│ John Doe  Acme Inc   New       You     [Edit] │
+│ Jane Smith TechCorp  Contacted Sarah   [Edit] │
+│ ...                                           │
+└─────────────────────────────────────────────┘
+
+Filters:
+- Status (dropdown)
+- Source (dropdown)
+- Date range (date picker)
+
+Actions:
+- Edit (shown if has edit permission)
+- Delete (shown if has delete permission)
+- Assign (shown if has assign permission)
+```
+
+**Page 2: Create/Edit Lead**
+```
+URL: /leads/create OR /leads/:id/edit
+
+Form Fields:
+┌─────────────────────────────────────────────┐
+│ Lead Information                            │
+│                                             │
+│ Name*          [____________]               │
+│ Email*         [____________]               │
+│ Phone          [____________]               │
+│ Company        [____________]               │
+│ Source*        [Dropdown ▼]                 │
+│ Status         [Dropdown ▼]                 │
+│ Notes          [_____________]              │
+│                [_____________]              │
+│                                             │
+│ [Cancel]  [Save]                            │
+└─────────────────────────────────────────────┘
+```
+
+**Page 3: Lead Detail**
+```
+URL: /leads/:id
+
+Layout:
+┌─────────────────────────────────────────────┐
+│ ← Back to Leads                             │
+│                                             │
+│ John Doe                      [Edit] [Assign]│
+│ john@acme.com | +1234567890                 │
+│ Acme Inc                                    │
+│                                             │
+│ Status: [Dropdown ▼]                        │
+│ Source: Website                             │
+│ Owner: Sarah Johnson                        │
+│ Created: Feb 1, 2024                        │
+│                                             │
+│ Notes:                                      │
+│ Interested in our Enterprise plan...        │
+│                                             │
+│ ─────────────────────────────────────       │
+│ Related Tasks (2)                           │
+│ • Follow up call - Due: Feb 5              │
+│ • Send proposal - Due: Feb 10              │
+│                                             │
+│ [+ Create Task for this Lead]              │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+### STEP 1.5: TASKS MODULE (Week 3-4)
+
+#### TASKS - Database & API
+
+**API Endpoints:**
+```
+GET    /api/tasks          - Get all tasks (filtered by scope)
+POST   /api/tasks          - Create new task
+GET    /api/tasks/:id      - Get one task
+PUT    /api/tasks/:id      - Update task
+DELETE /api/tasks/:id      - Delete task
+PUT    /api/tasks/:id/status - Update status
+```
+
+**Create Task Flow:**
+```
+FRONTEND:
+1. User clicks "Create Task" button
+2. Show form with fields:
+   - Title* (text)
+   - Description (textarea)
+   - Assign to* (dropdown: self or team members)
+   - Due date* (date + time picker)
+   - Priority* (dropdown: High/Medium/Low)
+   - Related to Lead (optional dropdown of leads)
+3. User fills form and clicks "Save"
+4. Send POST request to /api/tasks
+
+BACKEND:
+1. Check if user has "create" permission → if NO: return 403
+2. If assigning to others: Check "assign" permission
+3. Validate form data
+4. Insert into database with:
+   - creator_id = current user ID
+   - status = 'Pending'
+5. Send notification to assignee (Phase 2 feature)
+6. Return success with task ID
+
+FRONTEND:
+5. Show success message
+6. Redirect to tasks list OR task detail page
+```
+
+**Get Tasks Flow:**
+```
+FRONTEND:
+1. Page loads
+2. Send GET request to /api/tasks?filter=my-tasks
+   (or ?filter=team-tasks, ?filter=all-tasks based on tab)
+
+BACKEND:
+1. Check permission scope
+2. Apply filter:
+   - "my-tasks": WHERE assignee_id = current user
+   - "team-tasks": WHERE assignee_id IN (team members)
+   - "all-tasks": Apply scope filter (own/team/department/all)
+3. Return filtered tasks
+
+FRONTEND:
+3. Display tasks grouped by status:
+   - Today's Tasks
+   - Overdue Tasks
+   - Upcoming Tasks
+```
+
+**Update Task Status Flow:**
+```
+FRONTEND:
+1. User opens a task OR clicks status button
+2. User changes status:
+   - Pending → In Progress
+   - In Progress → Completed
+   - Any → Cancelled
+3. If status = "Completed": Show "Add completion note" field
+4. Send PUT request
+
+BACKEND:
+1. Check edit permission
+2. Check scope (can user edit this task?)
+3. Update status
+4. If status = "Completed": Set completed_time = now
+5. Update related lead's last_activity_date (if task is linked to lead)
+6. Return success
+
+FRONTEND:
+6. Update UI
+7. Move task to appropriate section
+8. Show success message
+```
+
+#### TASKS - Frontend Pages
+
+**Page 1: Tasks List**
+```
+URL: /tasks
+
+Tabs: [My Tasks] [Team Tasks] [All Tasks]
+
+Layout:
+┌─────────────────────────────────────────────┐
+│ [+ Create Task]  [Filters▼]  [Search...]   │
+├─────────────────────────────────────────────┤
+│ TODAY'S TASKS (3)                           │
+│ ☐ Follow up with Acme Corp    High   [▶]   │
+│ ☐ Send proposal to TechCorp   Medium [▶]   │
+│ ☐ Team meeting                 Low    [▶]   │
+│                                             │
+│ OVERDUE (1)                                 │
+│ ☐ Review contract (Due: Feb 1) High  [▶]   │
+│                                             │
+│ UPCOMING (5)                                │
+│ ☐ Call with client (Due: Feb 7)            │
+│ ...                                         │
+└─────────────────────────────────────────────┘
+
+Filters:
+- Priority
+- Status
+- Due date range
+- Assigned to
+
+Actions:
+- Click checkbox to mark complete
+- Click [▶] to view details
+```
+
+**Page 2: Create/Edit Task**
+```
+URL: /tasks/create OR /tasks/:id/edit
+
+Form Fields:
+┌─────────────────────────────────────────────┐
+│ Task Information                            │
+│                                             │
+│ Title*         [____________]               │
+│ Description    [_____________]              │
+│                [_____________]              │
+│ Assign to*     [Dropdown ▼]                │
+│ Due date*      [Feb 5, 2024  5:00 PM]      │
+│ Priority*      [Dropdown ▼]                │
+│ Related to     [Select Lead (optional) ▼]  │
+│                                             │
+│ [Cancel]  [Save]                            │
+└─────────────────────────────────────────────┘
+```
+
+**Page 3: Task Detail**
+```
+URL: /tasks/:id
+
+Layout:
+┌─────────────────────────────────────────────┐
+│ ← Back to Tasks                             │
+│                                             │
+│ [Status: Pending ▼]          [Edit] [Delete]│
+│                                             │
+│ Follow up with Acme Corp                    │
+│ Priority: High                              │
+│ Due: Feb 5, 2024 at 5:00 PM                │
+│ Assigned to: You                            │
+│ Created by: Sarah Johnson                   │
+│                                             │
+│ Description:                                │
+│ Call to discuss pricing and timeline        │
+│                                             │
+│ Related to: John Doe - Acme Inc (Lead)     │
+│                                             │
+│ [Mark as Complete]                          │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+### STEP 1.6: Basic Dashboard (Week 4)
+
+**What to Show:**
+```
+MANAGER/ADMIN VIEW:
+┌─────────────────────────────────────────────┐
+│ Dashboard                                   │
+│                                             │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│ │ 24      │ │ 12      │ │ 8       │       │
+│ │ New     │ │ Tasks   │ │ Tasks   │       │
+│ │ Leads   │ │ Due     │ │ Overdue │       │
+│ └─────────┘ └─────────┘ └─────────┘       │
+│                                             │
+│ Team Activity                               │
+│ • Sarah completed "Follow up with Acme"    │
+│ • John created new lead "TechCorp"         │
+│ • Mike updated lead status to "Qualified"  │
+│                                             │
+│ My Tasks (5)                                │
+│ ☐ Review proposal - Due today              │
+│ ☐ Team meeting - Due today                 │
+│ ...                                         │
+└─────────────────────────────────────────────┘
+
+EMPLOYEE VIEW:
+┌─────────────────────────────────────────────┐
+│ Dashboard                                   │
+│                                             │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│ │ 5       │ │ 3       │ │ 1       │       │
+│ │ My      │ │ Tasks   │ │ Task    │       │
+│ │ Leads   │ │ Due     │ │ Overdue │       │
+│ └─────────┘ └─────────┘ └─────────┘       │
+│                                             │
+│ My Tasks Today (3)                          │
+│ ☐ Follow up with Acme Corp                 │
+│ ☐ Send proposal                             │
+│ ☐ Update lead status                        │
+│                                             │
+│ My Recent Leads (5)                         │
+│ • John Doe - Acme Inc (New)                │
+│ • Jane Smith - TechCorp (Contacted)        │
+│ ...                                         │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+### STEP 1.7: Navigation & Layout (Week 4)
+
+**Main Layout:**
+```
+┌────────────────────────────────────────────────┐
+│ [Logo] CRM System          John Doe [Profile▼]│
+├──────────┬─────────────────────────────────────┤
+│          │                                     │
+│ 🏠 Dashboard                                   │
+│ 👥 Leads   │   PAGE CONTENT GOES HERE          │
+│ ✓ Tasks    │                                   │
+│          │                                     │
+│          │                                     │
+│          │                                     │
+│          │                                     │
+│          │                                     │
+└──────────┴─────────────────────────────────────┘
+
+Navigation Menu (shows based on permissions):
+- Dashboard (always visible)
+- Leads (if has leads.view permission)
+- Tasks (if has tasks.view permission)
+- More items in Phase 2...
+```
+
+---
+
+## PHASE 1 DELIVERABLES CHECKLIST
+
+**Week 1:**
+- [ ] Database tables created
+- [ ] Sample data inserted
+- [ ] Login API working
+- [ ] JWT token generation working
+- [ ] Login page created
+- [ ] Token stored in localStorage
+
+**Week 2:**
+- [ ] Leads API all endpoints working
+- [ ] Permission checks in place
+- [ ] Leads list page created
+- [ ] Create lead page created
+- [ ] Edit lead page created
+- [ ] Lead detail page created
+
+**Week 3:**
+- [ ] Tasks API all endpoints working
+- [ ] Permission checks in place
+- [ ] Tasks list page created
+- [ ] Create task page created
+- [ ] Task detail page created
+- [ ] Task status update working
+
+**Week 4:**
+- [ ] Dashboard created
+- [ ] Navigation menu created
+- [ ] Menu shows/hides based on permissions
+- [ ] Lead-Task linking working
+- [ ] Basic testing done
+- [ ] Deploy to staging server
+
+---
+
+## PHASE 2: PROJECTS + EOD + ATTENDANCE (2 months)
+
+### What We're Building
+1. Projects module (client projects)
+2. Products module (internal products)
+3. EOD (End of Day reports)
+4. Attendance (check-in/check-out)
+5. Leave management
+6. Notifications
+
+### Timeline
+- Week 5-6: Projects module
+- Week 7-8: Products module
+- Week 9: EOD module
+- Week 10: Attendance & Leave
+- Week 11-12: Notifications & Polish
+
+**Detailed breakdown provided after Phase 1 completion**
+
+---
+
+## PHASE 3: ADVANCED FEATURES (2 months)
+
+### What We're Building
+1. Employees management
+2. Departments management (Admin can create)
+3. Role Permission Matrix (Admin can customize)
+4. Reports & Analytics
+5. File uploads
+6. Email notifications
+
+### Timeline
+- Week 13-14: Employees & Departments
+- Week 15-16: Role Permission Matrix UI
+- Week 17-18: Reports
+- Week 19-20: Testing & Bug fixes
+- Week 21-24: Polish, deployment, training
+
+**Detailed breakdown provided after Phase 2 completion**
+
+---
+
+## QUICK START FOR DEVELOPER
+
+### Day 1 Setup
+```bash
+# Backend
+npm init -y
+npm install express pg jsonwebtoken bcrypt cors dotenv
+
+# Create folder structure:
+/backend
+  /routes      (API endpoints)
+  /controllers (Business logic)
+  /models      (Database queries)
+  /middleware  (Auth, permissions)
+  server.js
+
+# Frontend
+npx create-react-app crm-frontend
+npm install axios react-router-dom
+
+# Create folder structure:
+/src
+  /pages      (Leads, Tasks, Dashboard, Login)
+  /components (LeadForm, TaskCard, etc.)
+  /services   (API calls)
+  /utils      (Permission checks)
+```
+
+### Week 1 Focus
+1. Set up database
+2. Create users & employees tables
+3. Build login API
+4. Build login page
+5. Test: Can login and see token
+
+### Week 2 Focus
+1. Create leads table
+2. Build all leads API endpoints
+3. Build leads list page
+4. Test: Can create, view, edit leads
+
+---
+
+## FLOWCHARTS FOR PHASE 1
+
+### Flowchart 1: User Login
+
+```
+START
+  ↓
+Enter email & password
+  ↓
+Click "Login"
+  ↓
+Send to POST /api/auth/login
+  ↓
+Backend checks database
+  ↓
+Password correct? ─No→ Show error → END
+  ↓ Yes
+Generate JWT token
+  ↓
+Send token + user + permissions
+  ↓
+Frontend stores token
+  ↓
+Redirect to /dashboard
+  ↓
+END
+```
+
+### Flowchart 2: Create Lead
+
+```
+START
+  ↓
+User clicks "+ Create Lead"
+  ↓
+Has create permission? ─No→ Hide button → END
+  ↓ Yes
+Show lead form
+  ↓
+User fills: Name, Email, Company, Source
+  ↓
+User clicks "Save"
+  ↓
+Validate form (required fields filled?)
+  ↓ Yes
+POST /api/leads with data
+  ↓
+Backend: Check permission → OK?
+  ↓ Yes
+Backend: Save to database
+  ↓
+Backend: Return success + lead_id
+  ↓
+Frontend: Show "Lead created!"
+  ↓
+Redirect to /leads/:id (detail page)
+  ↓
+END
+```
+
+### Flowchart 3: View Leads List
+
+```
+START
+  ↓
+User navigates to /leads
+  ↓
+Has view permission? ─No→ Show 403 page → END
+  ↓ Yes
+GET /api/leads
+  ↓
+Backend: Check permission scope
+  ↓
+If scope="own" → Get WHERE owner_id = user
+If scope="team" → Get WHERE owner IN (team)
+If scope="all" → Get all leads
+  ↓
+Return filtered leads array
+  ↓
+Frontend: Display in table
+  ↓
+For each lead:
+  Show Edit button IF has edit permission
+  Show Delete button IF has delete permission
+  ↓
+END
+```
+
+### Flowchart 4: Create Task
+
+```
+START
+  ↓
+User clicks "+ Create Task"
+  ↓
+Show task form
+  ↓
+User fills: Title, Assign to, Due date, Priority
+  ↓
+Assign to self or others?
+  ├─ Self → OK, continue
+  └─ Others → Check "assign" permission?
+        ↓ No → Show error → END
+        ↓ Yes → Continue
+  ↓
+Optional: Link to a Lead?
+  ↓ Yes → Show leads dropdown
+  ↓
+User clicks "Save"
+  ↓
+POST /api/tasks with data
+  ↓
+Backend: Validate & save
+  ↓
+Backend: Create notification for assignee
+  ↓
+Frontend: Show "Task created!"
+  ↓
+Redirect to /tasks
+  ↓
+END
+```
+
+### Flowchart 5: Update Task Status
+
+```
+START
+  ↓
+User opens task detail page
+  ↓
+User changes status dropdown
+  ↓
+New status = "Completed"? 
+  ↓ Yes → Show "Add note" field
+  ↓
+User clicks "Update"
+  ↓
+PUT /api/tasks/:id/status
+  ↓
+Backend: Check edit permission & scope
+  ↓ OK
+Backend: Update status in database
+  ↓
+If status="Completed" → Set completed_time=now
+  ↓
+If task linked to lead → Update lead.last_activity
+  ↓
+Return success
+  ↓
+Frontend: Update UI
+  ↓
+Show "Status updated!"
+  ↓
+END
+```
+
+---
+
+## API QUICK REFERENCE (PHASE 1 ONLY)
+
+```
+AUTH:
+POST   /api/auth/login
+POST   /api/auth/logout
+
+LEADS:
+GET    /api/leads                  - List leads (filtered by scope)
+POST   /api/leads                  - Create lead
+GET    /api/leads/:id              - Get one lead
+PUT    /api/leads/:id              - Update lead
+DELETE /api/leads/:id              - Delete lead
+PUT    /api/leads/:id/assign       - Assign to someone
+
+TASKS:
+GET    /api/tasks                  - List tasks (filtered by scope)
+POST   /api/tasks                  - Create task
+GET    /api/tasks/:id              - Get one task
+PUT    /api/tasks/:id              - Update task
+DELETE /api/tasks/:id              - Delete task
+PUT    /api/tasks/:id/status       - Update status
+
+DASHBOARD:
+GET    /api/dashboard/stats        - Get counts for cards
+
+EMPLOYEES:
+GET    /api/employees              - Get team members (for dropdowns)
+```
+
+---
+
+## TESTING CHECKLIST (END OF PHASE 1)
+
+**As Admin:**
+- [ ] Can login
+- [ ] Can see all leads
+- [ ] Can create lead
+- [ ] Can edit any lead
+- [ ] Can delete any lead
+- [ ] Can assign lead to anyone
+- [ ] Can see all tasks
+- [ ] Can create task
+- [ ] Can assign task to anyone
+
+**As Manager:**
+- [ ] Can login
+- [ ] Can see team leads only
+- [ ] Can create lead
+- [ ] Can edit team leads
+- [ ] Cannot delete leads
+- [ ] Can assign lead to team members
+- [ ] Can see team tasks
+- [ ] Can create task for team
+
+**As Employee:**
+- [ ] Can login
+- [ ] Can see only own leads
+- [ ] Can create lead
+- [ ] Can edit own leads
+- [ ] Cannot delete leads
+- [ ] Cannot assign leads
+- [ ] Can see only own tasks
+- [ ] Can create task for self
+- [ ] Can update own task status
+
+---
+
+

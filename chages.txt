@@ -1,0 +1,236 @@
+# CRM System - RBAC Redesign Documentation
+
+## Date: 2026-02-06
+
+## Overview
+Complete redesign of the CRM system's authentication and permission architecture from a hardcoded VARCHAR-based system to a flexible, database-driven Role-Based Access Control (RBAC) system.
+
+## Key Changes
+
+### 1. Database Schema Changes
+
+#### New Tables Added:
+- **departments** - Organizational department master data
+  - Columns: id, name, code, description, is_active
+  - Purpose: Centralized department management
+
+- **roles** - System role definitions
+  - Columns: id, name, code, description, is_active
+  - Purpose: Define customizable roles (Admin, Manager, Employee, custom roles)
+
+- **permissions** - Granular permission master data
+  - Columns: id, module, action, scope_type, description
+  - Purpose: Define all available permissions (module + action + scope)
+
+- **role_permissions** - Many-to-many mapping
+  - Columns: id, role_id, permission_id
+  - Purpose: Assign permissions to roles dynamically
+
+#### Modified Tables:
+
+**users table:**
+- ❌ Removed: `role VARCHAR(50)`
+- ❌ Removed: `department VARCHAR(50)`
+- ✅ Added: `role_id INT` (foreign key to roles.id)
+- ✅ Added: `department_id INT` (foreign key to departments.id)
+
+**employees table:**
+- ✅ Added: `emp_id VARCHAR(20)` (auto-generated: EMP001, EMP002...)
+- ❌ Removed: `department VARCHAR(50)`
+- ❌ Removed: `role VARCHAR(50)`
+- ✅ Added: `department_id INT` (foreign key to departments.id)
+- ✅ Added: `role_id INT` (foreign key to roles.id)
+
+**leads table:**
+- ❌ Removed: `department VARCHAR(50)`
+- ✅ Added: `department_id INT` (foreign key to departments.id)
+
+### 2. Permission System Redesign
+
+#### Old System (Hardcoded):
+```javascript
+if (user.role === 'Admin') {
+  // hardcoded admin logic
+}
+```
+
+#### New System (Dynamic):
+```javascript
+checkPermission(user, 'leads', 'view', resourceOwnerId)
+// Looks up permissions from role_permissions table
+```
+
+**Permission Structure:**
+- **Module**: leads, tasks, employees, projects, reports, settings
+- **Action**: view, create, edit, delete, assign, export
+- **Scope**: own, team, department, all
+
+**Examples:**
+- `{module: "leads", action: "view", scope: "team"}` - View team leads
+- `{module: "tasks", action: "edit", scope: "own"}` - Edit own tasks
+- `{module: "employees", action: "create", scope: "all"}` - Create employees
+
+### 3. API Changes
+
+#### New Endpoints Added:
+
+**Departments:**
+- `GET /api/departments` - List all departments
+- `POST /api/departments` - Create department (Admin only)
+
+**Roles:**
+- `GET /api/roles` - List all roles
+- `POST /api/roles` - Create role (Admin only)
+
+**Permissions:**
+- `GET /api/permissions` - List all permissions
+- `GET /api/roles/:role_id/permissions` - Get permissions for a role
+- `POST /api/roles/:role_id/permissions` - Assign permissions to role
+- `DELETE /api/roles/:role_id/permissions/:permission_id` - Remove permission
+
+#### Modified Endpoints:
+
+**Login Response:**
+```json
+{
+  "user": {
+    "emp_id": "EMP005",
+    "role": { "id": 2, "name": "Manager", "code": "MANAGER" },
+    "department": { "id": 1, "name": "Sales", "code": "SALES" }
+  },
+  "permissions": [
+    { "module": "leads", "action": "view", "scope": "team" },
+    { "module": "tasks", "action": "create", "scope": "all" }
+  ]
+}
+```
+
+**Employee List Response:**
+```json
+{
+  "emp_id": "EMP003",
+  "role": { "id": 3, "name": "Employee" },
+  "department": { "id": 1, "name": "Sales" }
+}
+```
+
+### 4. Employee ID Generation
+
+**Auto-generated Format:** EMP001, EMP002, EMP003...
+
+**Implementation:**
+- PostgreSQL sequence `emp_id_seq`
+- Trigger function `generate_emp_id()`
+- Automatically assigned on employee creation
+- Read-only field (cannot be edited)
+
+### 5. Updated Documentation Files
+
+1. **DatabaseDesgin.txt**
+   - Complete schema redesign with RBAC tables
+   - Migration guide from old schema
+   - Comprehensive relationship documentation
+
+2. **Permission-Matrix-Document.txt**
+   - Dynamic permission system documentation
+   - Default role configurations
+   - Permission assignment workflows
+   - Backend/frontend enforcement examples
+
+3. **Api.txt**
+   - New RBAC endpoints
+   - Updated response formats
+   - Permission-based access control
+
+4. **PRD.txt**
+   - Updated Phase 1 scope to include RBAC
+   - New database table definitions
+
+## Benefits of New System
+
+### 1. Flexibility
+- Create custom roles without code changes
+- Assign/revoke permissions via admin UI
+- No deployment needed for permission changes
+
+### 2. Scalability
+- Supports unlimited custom roles
+- Granular permission control (module + action + scope)
+- Easy to add new modules/permissions
+
+### 3. Maintainability
+- No hardcoded role checks in application code
+- Single source of truth (database)
+- Clear permission evaluation logic
+
+### 4. Security
+- Fine-grained access control
+- Scope-based data filtering (own/team/department/all)
+- Backend enforcement with database lookups
+
+## Migration Path
+
+### Phase 1: Schema Migration
+1. Create new tables (departments, roles, permissions, role_permissions)
+2. Seed initial data
+3. Add new columns to existing tables
+4. Migrate data from VARCHAR to foreign keys
+5. Drop old VARCHAR columns
+
+### Phase 2: Code Migration
+1. Update API to load permissions from database
+2. Replace hardcoded role checks with permission lookups
+3. Update frontend to use permission arrays
+
+### Phase 3: UI Enhancement (Future)
+1. Admin UI for role management
+2. Permission assignment interface
+3. User role assignment tools
+
+## Breaking Changes
+
+### Backend:
+- All `if (user.role === 'Admin')` checks must be replaced
+- Permission loading logic must query database
+- API responses include normalized objects instead of strings
+
+### Frontend:
+- Role displayed as object `{id, name, code}` not string
+- Department displayed as object `{id, name, code}` not string
+- Permissions as array of objects, not single object
+- UI must check permission array for access control
+
+### Database:
+- Foreign key constraints added
+- Data migration required for existing records
+- New indexes for performance
+
+## Testing Requirements
+
+1. Verify permission loading on login
+2. Test all CRUD operations with different roles
+3. Validate scope filtering (own/team/department/all)
+4. Test permission assignment/revocation
+5. Verify employee ID auto-generation
+6. Test data migration scripts
+
+## Future Enhancements (Phase 3)
+
+1. Admin UI for role and permission management
+2. Permission inheritance
+3. Temporary permission grants
+4. Permission audit logs
+5. Department-based role overrides
+
+## Status
+✅ Documentation Complete
+⏳ Implementation Pending
+🔄 Requires Data Migration
+
+---
+
+**Important Notes:**
+- This is a breaking change requiring full system migration
+- All existing data must be migrated to new schema
+- Frontend and backend must be updated together
+- Thorough testing required before production deployment

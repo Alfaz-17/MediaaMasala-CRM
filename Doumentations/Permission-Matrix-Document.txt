@@ -1,0 +1,467 @@
+# Permission Matrix Document (Phase 1) - Dynamic RBAC
+
+## Project
+
+**CRM System – Phase 1 (Leads & Tasks Priority with Flexible RBAC)**
+
+**Applies To:** Authentication, Leads, Tasks, Dashboard, Employees, Roles, Departments
+**Roles:** Dynamically configurable via Admin UI
+
+---
+
+## 1. Purpose of This Document
+
+This document defines **who can do what** inside the CRM system using a **flexible, database-driven RBAC architecture**.
+
+It ensures:
+
+* Dynamic permission assignment without code changes
+* Clear access control rules through database configuration
+* Consistent backend authorization via permission lookup
+* Admin UI for managing role-permission mappings
+* No hardcoded role checks in application code
+
+This matrix is used by:
+
+* Backend permission middleware (queries role_permissions table)
+* Login API (loads permissions from database)
+* Frontend UI guards (buttons, pages based on user permissions)
+* Admin UI for permission management
+
+---
+
+## 2. RBAC Architecture Overview
+
+### 2.1 How It Works
+
+```
+User Login
+    ↓
+Load user.role_id
+    ↓
+Query role_permissions table
+    ↓
+Get all permissions for that role
+    ↓
+Return permissions in login response
+    ↓
+Frontend + Backend use permissions for access control
+```
+
+### 2.2 Key Tables
+
+1. **roles** - Role definitions (Admin, Manager, Employee, Custom Roles)
+2. **permissions** - All available permissions (module + action + scope)
+3. **role_permissions** - Which permissions are assigned to which roles
+4. **users** - User accounts with role_id
+5. **employees** - Employee profiles with role_id
+
+---
+
+## 3. Permission Structure
+
+Each permission has three components:
+
+1. **Module**: What feature (leads, tasks, employees, etc.)
+2. **Action**: What operation (view, create, edit, delete, assign)
+3. **Scope**: Data access level (own, team, department, all)
+
+**Example Permission:**
+```json
+{
+  "module": "leads",
+  "action": "view",
+  "scope_type": "team",
+  "description": "View team leads"
+}
+```
+
+---
+
+## 4. Permission Scopes Explained
+
+| Scope      | Meaning                                         | Example Query Filter                                |
+| ---------- | ----------------------------------------------- | --------------------------------------------------- |
+| own        | Only records created by or assigned to the user | `WHERE owner_id = current_user_id`                  |
+| team       | Records of direct reportees                     | `WHERE owner_id IN (SELECT team_member_ids)`        |
+| department | All records within the same department          | `WHERE department_id = current_user_department_id`  |
+| all        | System-wide access                              | No filter (all records)                            |
+
+---
+
+## 5. Default Role Configurations
+
+### 5.1 Admin Role (Default Configuration)
+
+| Module    | Action | Scope | Description               |
+| --------- | ------ | ----- | ------------------------- |
+| leads     | view   | all   | View all leads            |
+| leads     | create | all   | Create new leads          |
+| leads     | edit   | all   | Edit all leads            |
+| leads     | delete | all   | Delete leads              |
+| leads     | assign | all   | Assign leads to anyone    |
+| tasks     | view   | all   | View all tasks            |
+| tasks     | create | all   | Create new tasks          |
+| tasks     | edit   | all   | Edit all tasks            |
+| tasks     | delete | all   | Delete tasks              |
+| employees | view   | all   | View all employees        |
+| employees | create | all   | Create new employees      |
+| employees | edit   | all   | Edit employee profiles    |
+| employees | delete | all   | Delete employees          |
+
+**Notes:**
+* Admin has unrestricted access to all modules
+* Can customize any role's permissions
+* Can create new roles and departments
+
+---
+
+### 5.2 Manager Role (Default Configuration)
+
+| Module    | Action | Scope | Description                |
+| --------- | ------ | ----- | -------------------------- |
+| leads     | view   | team  | View team leads            |
+| leads     | view   | own   | View own leads             |
+| leads     | create | all   | Create new leads           |
+| leads     | edit   | team  | Edit team leads            |
+| leads     | edit   | own   | Edit own leads             |
+| leads     | assign | team  | Assign leads to team       |
+| tasks     | view   | team  | View team tasks            |
+| tasks     | view   | own   | View own tasks             |
+| tasks     | create | all   | Create new tasks           |
+| tasks     | edit   | team  | Edit team tasks            |
+| tasks     | edit   | own   | Edit own tasks             |
+| employees | view   | team  | View team members          |
+
+**Notes:**
+* Manager can view and edit team data
+* Cannot delete records (Phase 1 rule)
+* Can assign work to team members only
+* Team defined by manager_id relationship in employees table
+
+---
+
+### 5.3 Employee Role (Default Configuration)
+
+| Module | Action | Scope | Description       |
+| ------ | ------ | ----- | ----------------- |
+| leads  | view   | own   | View own leads    |
+| leads  | create | all   | Create new leads  |
+| leads  | edit   | own   | Edit own leads    |
+| tasks  | view   | own   | View own tasks    |
+| tasks  | create | all   | Create new tasks  |
+| tasks  | edit   | own   | Edit own tasks    |
+
+**Notes:**
+* Employee can manage only own data
+* Cannot view team or department data
+* Cannot assign or delete records
+* Can create new leads and tasks for themselves
+
+---
+
+## 6. How Permissions Are Assigned
+
+### 6.1 Database Assignment
+
+Permissions are assigned via the `role_permissions` table:
+
+```sql
+-- Example: Give Manager role the ability to view team leads
+INSERT INTO role_permissions (role_id, permission_id)
+VALUES (
+  (SELECT id FROM roles WHERE code = 'MANAGER'),
+  (SELECT id FROM permissions WHERE module = 'leads' 
+    AND action = 'view' AND scope_type = 'team')
+);
+```
+
+### 6.2 Admin UI (Phase 3)
+
+In Phase 3, admins will have a UI to:
+* Create custom roles
+* View all available permissions
+* Assign/revoke permissions to/from roles
+* See which users have which roles
+
+**Example UI Flow:**
+```
+1. Admin navigates to "Role Management"
+2. Selects "Manager" role
+3. Sees list of all permissions with checkboxes
+4. Checks/unchecks permissions
+5. Saves changes
+6. Changes take effect on next user login
+```
+
+---
+
+## 7. Backend Permission Enforcement
+
+### 7.1 Permission Loading
+
+**On Login:**
+```javascript
+// Pseudocode
+user = authenticate(email, password);
+role = getRoleById(user.role_id);
+permissions = getPermissionsForRole(role.id);
+
+return {
+  token: generateJWT(user),
+  user: userProfile,
+  permissions: permissions // Array of permission objects
+};
+```
+
+**Sample Login Response:**
+```json
+{
+  "token": "eyJhbGci...",
+  "user": {
+    "id": 5,
+    "name": "Sarah Johnson",
+    "email": "sarah@company.com",
+    "role": "Manager",
+    "department": "Sales"
+  },
+  "permissions": [
+    {
+      "module": "leads",
+      "action": "view",
+      "scope": "team"
+    },
+    {
+      "module": "leads",
+      "action": "edit",
+      "scope": "team"
+    },
+    {
+      "module": "tasks",
+      "action": "create",
+      "scope": "all"
+    }
+  ]
+}
+```
+
+---
+
+### 7.2 Permission Check Logic
+
+**Backend Middleware:**
+```javascript
+function checkPermission(user, module, action, resourceOwnerId) {
+  // 1. Find matching permission
+  const permission = user.permissions.find(p => 
+    p.module === module && p.action === action
+  );
+  
+  if (!permission) {
+    return false; // No permission for this action
+  }
+  
+  // 2. Check scope
+  switch (permission.scope) {
+    case 'all':
+      return true;
+    
+    case 'department':
+      return resource.department_id === user.department_id;
+    
+    case 'team':
+      return isInMyTeam(resourceOwnerId, user.id);
+    
+    case 'own':
+      // SECURITY PLUG: Check both owner AND department to prevent leakage 
+      // if employee moves to a different department but still owns old leads.
+      return resourceOwnerId === user.id && resource.department_id === user.department_id;
+    
+    default:
+      return false;
+  }
+}
+```
+
+**Usage Example:**
+```javascript
+// User tries to edit a lead
+app.put('/api/leads/:id', authenticate, async (req, res) => {
+  const lead = await getLeadById(req.params.id);
+  
+  if (!checkPermission(req.user, 'leads', 'edit', lead.owner_id)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
+  // Proceed with update
+  await updateLead(req.params.id, req.body);
+  res.json({ success: true });
+});
+```
+
+---
+
+## 8. Frontend Permission Enforcement
+
+### 8.1 UI Element Visibility
+
+Frontend should hide/disable UI elements based on permissions:
+
+```javascript
+// Check if user has permission
+function hasPermission(module, action) {
+  return user.permissions.some(p => 
+    p.module === module && p.action === action
+  );
+}
+
+// Usage in React component
+{hasPermission('leads', 'delete') && (
+  <button onClick={deleteLead}>Delete Lead</button>
+)}
+```
+
+**Examples:**
+* Hide "Delete Lead" button if no delete permission
+* Hide "Assign Lead" button if no assign permission
+* Hide "Team Tasks" tab if no team view permission
+* Disable edit form if no edit permission
+
+---
+
+### 8.2 Navigation Menu
+
+Show/hide menu items based on view permissions:
+
+```javascript
+const navigationItems = [
+  { 
+    label: 'Dashboard', 
+    path: '/dashboard', 
+    show: true // Always visible
+  },
+  { 
+    label: 'Leads', 
+    path: '/leads', 
+    show: hasPermission('leads', 'view')
+  },
+  { 
+    label: 'Tasks', 
+    path: '/tasks', 
+    show: hasPermission('tasks', 'view')
+  },
+  { 
+    label: 'Employees', 
+    path: '/employees', 
+    show: hasPermission('employees', 'view')
+  }
+];
+```
+
+---
+
+## 9. Creating Custom Roles
+
+### 9.1 Process
+
+**Step 1: Create Role**
+```sql
+INSERT INTO roles (name, code, description)
+VALUES ('Sales Lead', 'SALES_LEAD', 'Senior sales team member');
+```
+
+**Step 2: Assign Permissions**
+```sql
+-- Give more permissions than Employee, less than Manager
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+  (SELECT id FROM roles WHERE code = 'SALES_LEAD'),
+  id
+FROM permissions
+WHERE 
+  (module = 'leads' AND scope_type IN ('own', 'team')) OR
+  (module = 'tasks' AND scope_type = 'own') OR
+  (action = 'create');
+```
+
+**Step 3: Assign to Users**
+```sql
+UPDATE users
+SET role_id = (SELECT id FROM roles WHERE code = 'SALES_LEAD')
+WHERE id = 42;
+```
+
+---
+
+## 10. Permission Evaluation Priority
+
+When a user has multiple permissions for the same action:
+
+1. **Most permissive scope wins**
+   - If user has both `view:own` and `view:team`, use `view:team`
+   - Scope hierarchy: all > department > team > own
+
+2. **Explicit deny not supported in Phase 1**
+   - Presence of permission = allowed
+   - Absence of permission = denied
+
+---
+
+## 11. Special Cases
+
+### 11.1 Create Permission
+
+The `create` action typically doesn't need scope restrictions:
+* Creating leads/tasks assigns ownership to creator
+* Scope applied to the *created* resource, not the action itself
+
+### 11.2 Team Hierarchy
+
+Team scope depends on `employees.manager_id`:
+
+```sql
+-- Get team member IDs for permission check
+SELECT id FROM employees 
+WHERE manager_id = current_user_id
+  OR id = current_user_id; -- Include self in team
+```
+
+---
+
+## 12. Phase 2 Compatibility
+
+This permission system supports:
+
+* Custom role creation via UI
+* Permission inheritance (future enhancement)
+* Department-based role overrides
+* Project-specific permissions
+* Temporary permission grants
+* Permission audit logs
+
+No breaking changes required.
+
+---
+
+## 13. Migration from Old System
+
+**Old System:**
+* Hardcoded role checks: `if (user.role === 'Admin')`
+* VARCHAR-based roles and departments
+
+**New System:**
+* Dynamic permission lookup: `checkPermission(user, 'leads', 'view')`
+* Foreign key relationships to roles and departments tables
+
+**Breaking Changes:**
+* All role checks must be replaced with permission checks
+* Frontend must use permission arrays instead of role strings
+* API responses must include permission objects
+
+---
+
+## 14. Status
+
+✅ **Approved for Phase 1 Development with Dynamic RBAC**
+
+This document replaces the previous hardcoded permission matrix with a flexible, database-driven system that allows runtime permission management without code changes.

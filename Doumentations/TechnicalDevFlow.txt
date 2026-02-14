@@ -1,0 +1,165 @@
+MEDIA-MASALA CRM - PHASE 1: END-TO-END TECHNICAL DEVELOPMENT FLOW
+=================================================================
+
+ARCHITECTURE OVERVIEW
+---------------------
+| Layer      | Technology              | Port  |
+|------------|-------------------------|-------|
+| Frontend   | Next.js 15, React 19    | 3000  |
+| Backend    | Node.js, Express.js     | 4000  |
+| Database   | PostgreSQL (Neon Cloud) | -     |
+| ORM        | Prisma                  | -     |
+| Auth       | JWT (Backend) + NextAuth| -     |
+
+
+1. PROJECT SETUP
+----------------
+Prerequisites:
+- Node.js v20+
+- npm v10+
+- PostgreSQL (Local or Neon Cloud)
+
+Installation:
+  # Clone & Install
+  cd Mediaa-masala-CRM
+
+  # Backend
+  cd backend
+  npm install
+  cp .env.example .env  # Configure DATABASE_URL
+
+  # Frontend
+  cd ../frontend
+  npm install
+  cp .env.example .env  # Set NEXT_PUBLIC_API_URL
+
+
+2. DATABASE SETUP
+-----------------
+Schema Location: backend/prisma/schema.prisma
+
+Key Commands:
+  npx prisma generate     # Generate Prisma Client
+  npx prisma db push      # Push schema to DB
+  npm run seed            # Seed Database
+
+Data Tables:
+| Table         | Purpose                    |
+|---------------|----------------------------|
+| departments   | Org units                  |
+| roles         | 8 role types               |
+| permissions   | Module/action/scope matrix |
+| users         | Auth credentials           |
+| employees     | Detailed profiles          |
+| leads         | 10-stage sales funnel      |
+| tasks         | Activities linked to leads |
+
+
+3. BACKEND API DEVELOPMENT
+--------------------------
+Folder Structure:
+  backend/
+  ├── src/
+  │   ├── controllers/    # Route handlers
+  │   ├── services/       # Business logic
+  │   ├── middleware/     # Auth, permissions
+  │   ├── utils/          # Helpers (JWT)
+  │   └── index.ts        # Entrypoint
+  └── prisma/
+      ├── schema.prisma
+      └── seed.ts
+
+Request Lifecycle:
+  Frontend → Auth Middleware → Permission Check → 
+  Service Layer → Prisma → Database → JSON Response
+
+API Endpoints:
+| Method | Endpoint         | Auth Required       |
+|--------|------------------|---------------------|
+| POST   | /api/auth/login  | Public              |
+| GET    | /api/leads       | JWT                 |
+| POST   | /api/leads       | JWT + leads:create  |
+| GET    | /api/tasks       | JWT                 |
+| POST   | /api/tasks       | JWT + tasks:create  |
+
+Start Backend:
+  cd backend
+  npm run dev  # Runs on http://localhost:4000
+
+
+4. FRONTEND DEVELOPMENT
+-----------------------
+Folder Structure:
+  frontend/
+  ├── src/
+  │   ├── app/           # Next.js App Router
+  │   │   ├── auth/      # Login page
+  │   │   └── dashboard/ # Protected pages
+  │   ├── components/    # UI components
+  │   └── lib/           # Utilities, API client
+  └── next.config.mjs
+
+Authentication Flow:
+  1. User enters credentials on /auth/login
+  2. Frontend calls Backend /api/auth/login
+  3. Backend validates → returns JWT
+  4. NextAuth.js stores token in session
+  5. All API calls include JWT header
+
+Start Frontend:
+  cd frontend
+  npm run dev  # Runs on http://localhost:3000
+
+
+5. AUTHENTICATION & ROLES
+-------------------------
+Default Login:
+  Email: superadmin@media-masala.com
+  Password: Password@123
+  Role: ADMIN
+
+Available Roles:
+  - Administrator (ADMIN)
+  - Head of Sales (HEAD_SALES)
+  - BDM
+  - BDE
+  - Head of Department (HEAD_DEPT)
+  - Manager
+  - Graphic Designer (DESIGNER)
+  - Developer (DEVELOPER)
+
+
+6. LEAD STATUS WORKFLOW
+-----------------------
+New → Not_Responded / Wrong_Contact
+Not_Responded → Follow_Up / Lost
+Follow_Up → Prospect / Not_Responded
+Prospect → Hot_Prospect / Lost
+Hot_Prospect → Proposal_Sent
+Proposal_Sent → Closing / Lost
+Closing → Won / Lost
+
+Terminal States: Won, Lost, Wrong_Contact
+
+
+7. RUNNING BOTH SERVERS
+-----------------------
+Open two terminals:
+
+Terminal 1 (Backend):
+  cd backend && npm run dev
+
+Terminal 2 (Frontend):
+  cd frontend && npm run dev
+
+Access at: http://localhost:3000/auth/login
+
+
+8. DEVELOPMENT CHECKLIST
+------------------------
+[ ] Backend running on port 4000
+[ ] Frontend running on port 3000
+[ ] Database seeded with superadmin
+[ ] Can log in and reach Dashboard
+[ ] Leads API returns data
+[ ] Tasks API returns data

@@ -1,0 +1,43 @@
+CRM Complete Technology Stack Documentation
+Core Stack Overview
+This CRM system is designed for scalability, discipline, and long-term business use. The following
+stack ensures strong data integrity, clean UI/UX, and maintainable backend architecture.
+Core Technologies
+1 Frontend: Next.js (React-based framework)
+2 Backend: Node.js (API routes or separate service)
+3 Database: PostgreSQL (relational database)
+4 ORM: Prisma (schema, migrations, safe queries)
+Frontend Libraries
+1 Tailwind CSS – utility-first styling
+2 shadcn/ui or DaisyUI – reusable CRM-friendly components
+3 Zustand – global state management
+4 React Hook Form – form handling
+5 Zod – schema validation
+6 TanStack Query – API data caching & syncing
+7 TanStack Table – tables with sorting & filtering
+8 Day.js / date-fns – date & time handling
+9 lucide-react – icon system
+Backend Libraries
+1 Prisma Client – database access
+2 NextAuth/Auth.js – authentication & sessions
+3 bcrypt – password hashing
+4 jsonwebtoken – token-based auth (if custom)
+5 Zod – request validation
+6 BullMQ – background jobs & reminders
+7 Pino or Winston – logging
+8 Nodemailer – email notifications
+Database Capabilities
+1 Foreign keys for strict relationships
+2 Transactions for consistency
+3 Indexes for performance
+4 Views for reporting
+5 JSONB for flexible data storage
+DevOps & Tooling
+1 ESLint & Prettier – code quality
+2 dotenv – environment configuration
+3 Postman / Insomnia – API testing
+4 Prisma Studio – DB inspection
+5 Vercel – frontend deployment
+6 Render / Railway / Supabase – PostgreSQL hosting
+Conclusion
+This stack balances speed, safety, and scalability. PostgreSQL ensures data correctness, Prisma

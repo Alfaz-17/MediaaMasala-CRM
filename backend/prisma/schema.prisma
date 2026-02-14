@@ -1,0 +1,441 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- RBAC & ORG STRUCTURE ---
+
+model Department {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  code        String     @unique
+  description String?
+  isActive    Boolean    @default(true)
+  users       User[]
+  employees   Employee[]
+  leads       Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("departments")
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  code        String           @unique
+  description String?
+  isActive    Boolean          @default(true)
+  permissions RolePermission[]
+  users       User[]
+  employees   Employee[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  module      String // leads, tasks, etc.
+  action      String // view, create, edit, delete, assign
+  scopeType   String // own, team, department, all
+  description String?
+  roles       RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([module, action, scopeType])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// --- USER & AUTH ---
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  isActive     Boolean  @default(true)
+  roleId       Int
+  role         Role     @relation(fields: [roleId], references: [id])
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+  employee     Employee?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Employee {
+  id           Int        @id @default(autoincrement())
+  empId        String     @unique // Format: EMP001
+  userId       Int?       @unique
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  email        String     @unique
+  phone        String?
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+  roleId       Int
+  role         Role       @relation(fields: [roleId], references: [id])
+  
+  managerId    Int?
+  manager      Employee?  @relation("ReportingLine", fields: [managerId], references: [id])
+  reportees    Employee[] @relation("ReportingLine")
+
+  // Business Data Ownership
+  ownedLeads   Lead[]     @relation("LeadOwner")
+  createdTasks Task[]     @relation("TaskCreator")
+  assignedTasks Task[]    @relation("TaskAssignee")
+  
+  assignmentLogsPerformed LeadAssignmentLog[] @relation("PerformedBy")
+  assignmentLogsReceived  LeadAssignmentLog[] @relation("AssignedTo")
+
+  // Follow-up and Notes
+  followUpsLogged  FollowUpLog[] @relation("FollowUpsLogged")
+  notesAuthored    LeadNote[]    @relation("NotesAuthored")
+  eodReports       EodReport[]
+
+  // HR Data
+  attendanceLogs   Attendance[]
+  leaveRequests    LeaveRequest[]
+  approvedLeaves   LeaveRequest[] @relation("ApprovedLeaves")
+  activityLogs     ActivityLog[]
+
+  joiningDate DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("employees")
+}
+
+// --- BUSINESS DATA ---
+
+enum LeadStatus {
+  New
+  Not_Responded
+  Wrong_Contact
+  Follow_Up
+  Prospect
+  Hot_Prospect
+  Proposal_Sent
+  Closing
+  Won
+  Lost
+}
+
+enum LeadSource {
+  Website
+  Referral
+  Cold_Call
+  Email
+}
+
+model Lead {
+  id           String     @id @default(uuid()) // SECURITY PLUG: UUID
+  name         String
+  email        String
+  phone        String?
+  company      String?
+  source       LeadSource
+  status       LeadStatus @default(New)
+  notes        String?
+  lostReason   String?    // PRD: Capture reason when lead is Lost
+  
+  ownerId      Int?
+  owner        Employee?  @relation("LeadOwner", fields: [ownerId], references: [id])
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  tasks        Task[]
+  assignmentLogs LeadAssignmentLog[]
+  followUpLogs   FollowUpLog[]
+  leadNotes      LeadNote[]
+  project        Project?
+
+  lastActivityAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([source])
+  @@map("leads")
+}
+
+model Task {
+  id          String   @id @default(uuid()) // SECURITY PLUG: UUID
+  title       String
+  description String?
+  
+  assigneeId  Int?
+  assignee    Employee? @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creatorId   Int?
+  creator     Employee? @relation("TaskCreator", fields: [creatorId], references: [id])
+  
+  dueDate     DateTime
+  priority    String   // High, Medium, Low
+  status      String   // Pending, In Progress, Completed, Cancelled
+  completionNote String? // PRD: Capture note when task is Completed
+  
+  relatedToLeadId String?
+  lead            Lead?    @relation(fields: [relatedToLeadId], references: [id], onDelete: SetNull) // FLOW FIX: SET NULL
+
+  // Expanded Relations
+  projectId   Int?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  productId   Int?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@index([relatedToLeadId])
+  @@index([projectId])
+  @@index([productId])
+  @@index([status])
+  @@index([priority])
+  @@map("tasks")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  price       Float?   @default(0)
+  category    String?  // e.g. "Marine Spare", "Engine Core"
+  isActive    Boolean  @default(true)
+  
+  tasks       Task[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}
+
+model LeadAssignmentLog {
+  id           Int      @id @default(autoincrement())
+  leadId       String
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  performedById Int
+  performedBy   Employee @relation("PerformedBy", fields: [performedById], references: [id])
+  
+  assignedToId  Int
+  assignedTo    Employee @relation("AssignedTo", fields: [assignedToId], references: [id])
+  
+  date         DateTime @default(now())
+  leadStatus   LeadStatus
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@map("lead_assignment_logs")
+}
+
+// --- FOLLOW-UP TRACKING ---
+
+model FollowUpLog {
+  id           Int        @id @default(autoincrement())
+  leadId       String
+  lead         Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  employeeId   Int        // Who logged the follow-up
+  employee     Employee   @relation("FollowUpsLogged", fields: [employeeId], references: [id])
+  
+  scheduledDate DateTime  // When follow-up is scheduled
+  completedDate DateTime? // When it was actually completed (null if pending)
+  
+  outcome      String?    // Brief outcome of the follow-up
+  nextAction   String?    // Next action to take
+  
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([leadId])
+  @@index([employeeId])
+  @@map("follow_up_logs")
+}
+
+// --- LEAD NOTES (Ownership-Aware) ---
+
+model LeadNote {
+  id           Int        @id @default(autoincrement())
+  leadId       String
+  lead         Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  authorId     Int        // Employee who wrote this note
+  author       Employee   @relation("NotesAuthored", fields: [authorId], references: [id])
+  
+  content      String     // The note text
+  isPrivate    Boolean    @default(false) // If true, only author can see
+  
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([leadId])
+  @@index([authorId])
+  @@map("lead_notes")
+}
+
+// --- OPERATIONS & REPORTING ---
+
+model EodReport {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  date        DateTime @default(now())
+  content     String   // The daily summary
+  leadsCount  Int      @default(0) // New leads handled
+  tasksCount  Int      @default(0) // Tasks completed
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([date])
+  @@map("eod_reports")
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  status      String   @default("Active") // Active, Completed, On Hold
+  
+  leadId      String?  @unique
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  
+  tasks       Task[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model Attendance {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  date        DateTime @default(now())
+  checkIn     DateTime @default(now())
+  checkOut    DateTime?
+  status      AttendanceStatus @default(Present) // Present, Late, Half_Day, Absent
+  
+  location    String?
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([date])
+  @@map("attendance")
+}
+
+model LeaveRequest {
+  id            Int      @id @default(autoincrement())
+  employeeId    Int
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  startDate     DateTime
+  endDate       DateTime
+  type          LeaveType // Sick, Casual, Annual, Unpaid
+  reason        String
+  status        LeaveStatus @default(Pending) // Pending, Approved, Rejected
+  
+  approvedById  Int?
+  approvedBy    Employee? @relation("ApprovedLeaves", fields: [approvedById], references: [id])
+  managerNote   String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([status])
+  @@map("leave_requests")
+}
+
+enum AttendanceStatus {
+  Present
+  Late
+  Half_Day
+  Absent
+}
+
+enum LeaveType {
+  Sick
+  Casual
+  Annual
+  Unpaid
+}
+
+enum LeaveStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  
+  // Actor
+  employeeId  Int
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  
+  // Context
+  module      String   // leads, tasks, projects, etc.
+  action      String   // CREATE, UPDATE, DELETE, STATUS_CHANGE, ASSIGN
+  
+  // Targeting
+  entityId    String?  // UUID of Lead/Project or ID of Task/Product
+  entityName  String?  // Brief name for display (e.g., Lead Name)
+  
+  // Data
+  description String   // Human readable summary
+  metadata    Json?    // Store old/new values if needed
+  
+  createdAt   DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([module])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}

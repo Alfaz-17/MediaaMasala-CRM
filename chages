@@ -1,0 +1,2 @@
+ - change status  data type from varchar to enum in leads table
+ - add new table which will keep the logs of leads once it get assigned  , table fields : id , lead_id , asignee_id , assigned_to_id , date , lead_status , created_at , updated_at

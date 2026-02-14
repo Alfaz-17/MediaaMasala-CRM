@@ -1,0 +1,699 @@
+# API Contract / API Documentation (Phase 1)
+
+## Project
+
+**CRM System – Phase 1 (Leads & Tasks Priority)**
+
+**Base URL:** `/api`
+**Authentication:** JWT (Bearer Token)
+**Data Format:** JSON
+
+---
+
+## 1. Purpose of This Document
+
+This document defines the **official API contract** between the **frontend and backend** for Phase 1 of the CRM system.
+
+It ensures:
+
+* Clear request/response formats
+* Predictable error handling
+* Consistent permission enforcement
+* No frontend–backend mismatch
+
+---
+
+## 2. Authentication & Authorization
+
+### 2.1 Authentication Method
+
+* JWT token generated on login
+* Token must be sent in header for all protected APIs
+
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+---
+
+### 2.2 Common Error Responses
+
+| HTTP Code | Meaning                              |
+| --------- | ------------------------------------ |
+| 400       | Validation error                     |
+| 401       | Unauthorized (token missing/invalid) |
+| 403       | Forbidden (no permission)            |
+| 404       | Resource not found                   |
+| 500       | Server error                         |
+
+---
+
+## 3. AUTH MODULE
+
+### 3.1 Login
+
+**Endpoint**
+
+```
+POST /api/auth/login
+```
+
+**Request Body**
+
+```json
+{
+  "email": "john@company.com",
+  "password": "password123"
+}
+```
+
+**Success Response (200)**
+
+```json
+{
+  "token": "eyJhbGci...",
+  "user": {
+    "id": 1,
+    "emp_id": "EMP005",
+    "name": "John Doe",
+    "email": "john@company.com",
+    "role": {
+      "id": 2,
+      "name": "Manager",
+      "code": "MANAGER"
+    },
+    "department": {
+      "id": 1,
+      "name": "Sales",
+      "code": "SALES"
+    }
+  },
+  "permissions": [
+    {
+      "module": "leads",
+      "action": "view",
+      "scope": "team"
+    },
+    {
+      "module": "leads",
+      "action": "create",
+      "scope": "all"
+    },
+    {
+      "module": "leads",
+      "action": "edit",
+      "scope": "team"
+    },
+    {
+      "module": "tasks",
+      "action": "view",
+      "scope": "team"
+    },
+    {
+      "module": "tasks",
+      "action": "create",
+      "scope": "all"
+    }
+  ]
+}
+```
+
+**Errors**
+
+* 401 – Invalid credentials
+
+---
+
+### 3.2 Logout
+
+**Endpoint**
+
+```
+POST /api/auth/logout
+```
+
+**Notes**
+
+* Token invalidation handled client-side in Phase 1
+
+---
+
+## 4. RBAC MODULE (Roles, Departments, Permissions)
+
+### 4.1 Get Departments
+
+**Endpoint**
+
+```
+GET /api/departments
+```
+
+**Success Response (200)**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Sales",
+    "code": "SALES",
+    "description": "Sales and business development"
+  },
+  {
+    "id": 2,
+    "name": "Development",
+    "code": "DEV",
+    "description": "Software development team"
+  }
+]
+```
+
+---
+
+### 4.2 Create Department (Admin Only)
+
+**Endpoint**
+
+```
+POST /api/departments
+```
+
+**Request Body**
+
+```json
+{
+  "name": "Marketing",
+  "code": "MKT",
+  "description": "Marketing and communications"
+}
+```
+
+**Success Response (201)**
+
+```json
+{
+  "success": true,
+  "department_id": 5
+}
+```
+
+---
+
+### 4.3 Get Roles
+
+**Endpoint**
+
+```
+GET /api/roles
+```
+
+**Success Response (200)**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Admin",
+    "code": "ADMIN",
+    "description": "Full system access"
+  },
+  {
+    "id": 2,
+    "name": "Manager",
+    "code": "MANAGER",
+    "description": "Team management access"
+  }
+]
+```
+
+---
+
+### 4.4 Create Role (Admin Only)
+
+**Endpoint**
+
+```
+POST /api/roles
+```
+
+**Request Body**
+
+```json
+{
+  "name": "Sales Lead",
+  "code": "SALES_LEAD",
+  "description": "Senior sales team member"
+}
+```
+
+**Success Response (201)**
+
+```json
+{
+  "success": true,
+  "role_id": 4
+}
+```
+
+---
+
+### 4.5 Get Permissions
+
+**Endpoint**
+
+```
+GET /api/permissions
+```
+
+**Query Params**
+
+* `module` - Filter by module (optional)
+
+**Success Response (200)**
+
+```json
+[
+  {
+    "id": 1,
+    "module": "leads",
+    "action": "view",
+    "scope_type": "own",
+    "description": "View own leads"
+  },
+  {
+    "id": 2,
+    "module": "leads",
+    "action": "view",
+    "scope_type": "team",
+    "description": "View team leads"
+  }
+]
+```
+
+---
+
+### 4.6 Get Role Permissions
+
+**Endpoint**
+
+```
+GET /api/roles/:role_id/permissions
+```
+
+**Success Response (200)**
+
+```json
+{
+  "role": {
+    "id": 2,
+    "name": "Manager",
+    "code": "MANAGER"
+  },
+  "permissions": [
+    {
+      "id": 2,
+      "module": "leads",
+      "action": "view",
+      "scope_type": "team"
+    },
+    {
+      "id": 5,
+      "module": "leads",
+      "action": "create",
+      "scope_type": "all"
+    }
+  ]
+}
+```
+
+---
+
+### 4.7 Assign Permissions to Role (Admin Only)
+
+**Endpoint**
+
+```
+POST /api/roles/:role_id/permissions
+```
+
+**Request Body**
+
+```json
+{
+  "permission_ids": [1, 2, 5, 10, 15]
+}
+```
+
+**Success Response (200)**
+
+```json
+{
+  "success": true,
+  "assigned_count": 5
+}
+```
+
+---
+
+### 4.8 Remove Permission from Role (Admin Only)
+
+**Endpoint**
+
+```
+DELETE /api/roles/:role_id/permissions/:permission_id
+```
+
+**Success Response (200)**
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
+## 5. EMPLOYEES MODULE
+
+### 5.1 Get Employees (for dropdowns)
+
+**Endpoint**
+
+```
+GET /api/employees
+```
+
+**Query Params**
+
+* `scope=team | department | all`
+
+**Success Response (200)**
+
+```json
+[
+  {
+    "id": 3,
+    "emp_id": "EMP003",
+    "name": "Sarah Johnson",
+    "department": {
+      "id": 1,
+      "name": "Sales"
+    },
+    "role": {
+      "id": 3,
+      "name": "Employee"
+    }
+  }
+]
+
+**Implementation Note:**
+Backend must filter results to only show employees in the same department as the requester, unless requester has 'all' scope.
+```
+
+---
+
+## 6. LEADS MODULE
+
+### 5.1 Get Leads (List)
+
+**Endpoint**
+
+```
+GET /api/leads
+```
+
+**Query Params**
+
+* `status`
+* `source`
+* `search`
+* `from_date`, `to_date`
+
+**Permission**
+
+* Scope-based filtering (own / team / department / all)
+
+**Success Response (200)**
+
+```json
+[
+  {
+    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "name": "John Doe",
+    "company": "Acme Inc",
+    "email": "john@acme.com",
+    "status": "New",
+    "owner": "Sarah Johnson",
+    "created_at": "2024-02-01"
+  }
+]
+```
+
+---
+
+### 5.2 Create Lead
+
+**Endpoint**
+
+```
+POST /api/leads
+```
+
+**Request Body**
+
+```json
+{
+  "name": "John Doe",
+  "email": "john@acme.com",
+  "phone": "+1234567890",
+  "company": "Acme Inc",
+  "source": "Website",
+  "notes": "Interested in pricing"
+}
+```
+
+**Success Response (201)**
+
+```json
+{
+  "success": true,
+  "lead_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+}
+```
+
+**Errors**
+
+* 403 – No create permission
+
+---
+
+### 5.3 Get Lead by ID
+
+**Endpoint**
+
+```
+GET /api/leads/:id
+```
+
+---
+
+### 5.4 Update Lead
+
+**Endpoint**
+
+```
+PUT /api/leads/:id
+```
+
+**Request Body (Partial allowed)**
+
+```json
+{
+  "status": "Contacted",
+  "notes": "Called and discussed requirements"
+}
+```
+
+---
+
+### 5.5 Assign Lead
+
+**Endpoint**
+
+```
+PUT /api/leads/:id/assign
+```
+
+**Request Body**
+
+```json
+{
+  "employee_id": 5
+}
+
+**Security Note:**
+Backend must verify that `employee_id` belongs to the same `department_id` as the lead, or that the assigner has "all" scope permissions.
+```
+
+---
+
+### 5.6 Delete Lead
+
+**Endpoint**
+
+```
+DELETE /api/leads/:id
+```
+
+**Permission**
+
+* Admin only (Phase 1)
+
+---
+
+## 7. TASKS MODULE
+
+### 6.1 Get Tasks
+
+**Endpoint**
+
+```
+GET /api/tasks
+```
+
+**Query Params**
+
+* `filter=my | team | all`
+* `priority`
+* `status`
+
+---
+
+### 6.2 Create Task
+
+**Endpoint**
+
+```
+POST /api/tasks
+```
+
+**Request Body**
+
+```json
+{
+  "title": "Follow up call",
+  "description": "Discuss pricing",
+  "assignee_id": 4,
+  "due_date": "2024-02-05T17:00:00",
+  "priority": "High",
+  "related_to_lead_id": 10
+}
+```
+
+**Success Response (201)**
+
+```json
+{
+  "success": true,
+  "task_id": 22
+}
+```
+
+---
+
+### 6.3 Get Task by ID
+
+**Endpoint**
+
+```
+GET /api/tasks/:id
+```
+
+---
+
+### 6.4 Update Task
+
+**Endpoint**
+
+```
+PUT /api/tasks/:id
+```
+
+---
+
+### 6.5 Update Task Status
+
+**Endpoint**
+
+```
+PUT /api/tasks/:id/status
+```
+
+**Request Body**
+
+```json
+{
+  "status": "Completed",
+  "completion_note": "Client confirmed interest"
+}
+```
+
+---
+
+### 6.6 Delete Task
+
+**Endpoint**
+
+```
+DELETE /api/tasks/:id
+```
+
+---
+
+## 8. DASHBOARD MODULE
+
+### 7.1 Get Dashboard Stats
+
+**Endpoint**
+
+```
+GET /api/dashboard/stats
+```
+
+**Success Response (200)**
+
+```json
+{
+  "new_leads": 12,
+  "tasks_due_today": 5,
+  "overdue_tasks": 2
+}
+```
+
+---
+
+## 9. API Conventions
+
+* All timestamps in ISO 8601 format
+* Soft deletes preferred (future)
+* Validation errors return field-level messages
+
+---
+
+## 10. Phase 2 Compatibility Notes
+
+This API structure supports future additions:
+
+* Notifications
+* Projects
+* Reports
+* File uploads
+
+No breaking changes expected.
+
+---
+
+## 11. Status
+
+✅ **Approved for Phase 1 Development with RBAC**
+
+Any change after development start requires versioning or migration.

@@ -1,0 +1,156 @@
+MEDIA-MASALA CRM - DATABASE SCHEMA REFERENCE
+===========================================
+
+Updated: Added FollowUpLog and LeadNote tables
+
+LEAD STATUS FLOW (10-Stage Sales Funnel)
+-----------------------------------------
+New → Not Responded / Wrong Contact
+Not Responded → Follow-Up / Lost
+Follow-Up → Prospect / Not Responded  
+Prospect → Hot Prospect / Lost
+Hot Prospect → Proposal Sent
+Proposal Sent → Closing / Lost
+Closing → Won / Lost
+
+Terminal States: Won, Lost, Wrong_Contact
+
+
+ROLES (8 Role Types)
+--------------------
+| Role               | Code       | Description                  |
+| Administrator      | ADMIN      | Full system control          |
+| Head of Sales      | HEAD_SALES | Sales department lead        |
+| BDM                | BDM        | Business Development Manager |
+| BDE                | BDE        | Business Development Exec    |
+| Head of Department | HEAD_DEPT  | Department lead              |
+| Manager            | MANAGER    | Team manager                 |
+| Graphic Designer   | DESIGNER   | Creative design role         |
+| Developer          | DEVELOPER  | Software developer           |
+
+
+TABLES
+------
+
+1. ORGANIZATIONAL STRUCTURE
+
+Table: Department
+- id (Int): Primary Key
+- name (String): Unique Name
+- code (String): Unique Code
+- isActive (Boolean): Default true
+- createdAt, updatedAt: Timestamps
+
+Table: Role
+- id (Int): Primary Key
+- name (String): Unique Name
+- code (String): Unique Code
+- isActive (Boolean): Default true
+- createdAt, updatedAt: Timestamps
+
+Table: Permission
+- id (Int): Primary Key
+- module (String): e.g., leads, tasks
+- action (String): e.g., view, create
+- scopeType (String): own, team, all
+- createdAt, updatedAt: Timestamps
+
+Table: RolePermission
+- id (Int): Primary Key
+- roleId (Int): FK to Role
+- permissionId (Int): FK to Permission
+- createdAt, updatedAt: Timestamps
+
+
+2. AUTHENTICATION & HR
+
+Table: User (Auth Credentials)
+- id (Int): Primary Key
+- email (String): Unique Login Email
+- passwordHash (String): Bcrypt Hash
+- isActive (Boolean): Default true
+- roleId (Int): FK to Role
+- departmentId (Int): FK to Department
+- createdAt, updatedAt: Timestamps
+
+Table: Employee (Detailed Profile)
+- id (Int): Primary Key
+- empId (String): Unique Business ID (EMP001)
+- userId (Int?): Link to User Table
+- firstName, lastName (String)
+- email (String): Unique
+- phone (String?)
+- departmentId (Int): FK to Department
+- roleId (Int): FK to Role
+- managerId (Int?): Reporting Manager
+- isActive (Boolean): Default true
+- createdAt, updatedAt: Timestamps
+
+
+3. BUSINESS DATA
+
+Table: Lead
+- id (String/UUID): Primary Key
+- name (String)
+- email (String)
+- phone (String?)
+- company (String?)
+- source (Enum): Website, Referral, Cold_Call, Email
+- status (Enum): New, Not_Responded, Wrong_Contact, Follow_Up, 
+                 Prospect, Hot_Prospect, Proposal_Sent, 
+                 Closing, Won, Lost
+- notes (String?): Legacy field
+- ownerId (Int?): FK to Employee
+- departmentId (Int): FK to Department
+- createdAt, updatedAt: Timestamps
+
+Table: Task
+- id (String/UUID): Primary Key
+- title (String)
+- description (String?)
+- assigneeId (Int?): FK to Employee
+- creatorId (Int?): FK to Employee
+- dueDate (DateTime)
+- priority (String): High, Medium, Low
+- status (String): Pending, In Progress, Completed
+- relatedToLeadId (String?): FK to Lead
+- createdAt, updatedAt: Timestamps
+
+
+4. ACTIVITY TRACKING
+
+Table: LeadAssignmentLog
+- id (Int): Primary Key
+- leadId (String): FK to Lead
+- performedById (Int): FK to Employee
+- assignedToId (Int): FK to Employee
+- date (DateTime)
+- leadStatus (Enum): Lead status at time of assignment
+- createdAt, updatedAt: Timestamps
+
+Table: FollowUpLog [NEW]
+- id (Int): Primary Key
+- leadId (String): FK to Lead
+- employeeId (Int): FK to Employee [WHO LOGGED IT]
+- scheduledDate (DateTime): When follow-up is scheduled
+- completedDate (DateTime?): When completed (null if pending)
+- outcome (String?): Brief outcome description
+- nextAction (String?): Next action to take
+- createdAt, updatedAt: Timestamps
+
+Table: LeadNote [NEW]
+- id (Int): Primary Key
+- leadId (String): FK to Lead
+- authorId (Int): FK to Employee [AUTHOR OF NOTE]
+- content (String): Note text content
+- isPrivate (Boolean): Default false
+- createdAt, updatedAt: Timestamps
+
+
+DESIGN NOTES
+------------
+- All business data uses employeeId (not userId)
+- userId only used for authentication linkage
+- LeadNote: New owners can VIEW all notes (isPrivate=false) 
+  but can only ADD new notes, not edit existing ones
+- FollowUpLog: Tracks both scheduled and completed follow-ups

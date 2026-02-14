@@ -1,0 +1,26 @@
+"use client"
+
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+
+export default function Home() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === "loading") return // Wait for session check
+
+    if (session) {
+      router.replace("/dashboard")
+    } else {
+      router.replace("/auth/login")
+    }
+  }, [session, status, router])
+
+  return (
+    <main className="flex min-h-screen items-center justify-center">
+      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+    </main>
+  )
+}
