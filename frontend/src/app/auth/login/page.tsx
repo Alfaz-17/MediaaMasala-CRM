@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
-import { signIn } from "next-auth/react"
+import React, { useState, useEffect } from "react"
+import { signIn, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -10,11 +10,26 @@ import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 
 export default function LoginPage() {
+  const { data: session, status } = useSession()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.replace("/dashboard")
+    }
+  }, [session, status, router])
+
+  if (status === "loading" || (status === "authenticated" && session)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
