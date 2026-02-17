@@ -5,10 +5,18 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import { apiClient } from "@/lib/api-client"
 import React from "react"
 
 interface Role {
+  id: number
+  name: string
+  code: string
+  departmentId: number | null
+}
+
+interface Department {
   id: number
   name: string
   code: string
@@ -25,6 +33,8 @@ interface Permission {
 export default function PermissionMatrixPage() {
   const { data: session } = useSession()
   const [roles, setRoles] = useState<Role[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [permissions, setPermissions] = useState<Permission[]>([])
   const [matrix, setMatrix] = useState<Record<number, number[]>>({}) // { roleId: [permIds] }
   const [loading, setLoading] = useState(true)
@@ -32,26 +42,16 @@ export default function PermissionMatrixPage() {
 
   const fetchData = async () => {
     try {
-      const [rolesData, permsData] = await Promise.all([
-        apiClient.get("/admin/roles"),
-        apiClient.get("/admin/permissions")
-      ])
-
-      setRoles(rolesData)
-      setPermissions(permsData)
-
-      // Fetch permissions for each role
-      const matrixData: Record<number, number[]> = {}
-      for (const role of rolesData) {
-        try {
-          const rolePerms = await apiClient.get(`/admin/roles/${role.id}/permissions`)
-          matrixData[role.id] = rolePerms.map((p: Permission) => p.id)
-        } catch (err) {
-          console.error(`Error fetching perms for role ${role.id}:`, err)
-          matrixData[role.id] = []
-        }
-      }
-      setMatrix(matrixData)
+      setLoading(true)
+      const data = await apiClient.get("/admin/permissions-matrix")
+      
+      setRoles(data.roles)
+      setPermissions(data.permissions)
+      setMatrix(data.matrix)
+      
+      // Fetch departments separately as they are not part of the matrix endpoint but needed for filter
+      const deptsData = await apiClient.get("/admin/departments")
+      setDepartments(deptsData)
     } catch (err) {
       console.error("Error fetching matrix data:", err)
     } finally {
@@ -88,6 +88,11 @@ export default function PermissionMatrixPage() {
     }
   }
 
+  // Filter roles based on selected department
+  const filteredRoles = roles.filter(role => 
+    selectedDeptId === "all" || role.departmentId === parseInt(selectedDeptId)
+  )
+
   // Group permissions by module and action
   // Result: { module: { action: [Permission records with different scopeTypes] } }
   const groupedMatrix = permissions.reduce((acc, perm) => {
@@ -104,6 +109,19 @@ export default function PermissionMatrixPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">App Permissions</h1>
           <p className="text-muted-foreground text-xs font-medium mt-1">Define exactly what each job role can see and do in the system.</p>
         </div>
+        <div className="flex items-center gap-3">
+          <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider">Filter Dept:</Label>
+          <select
+            value={selectedDeptId}
+            onChange={(e) => setSelectedDeptId(e.target.value)}
+            className="h-9 rounded-lg border border-border/40 bg-card px-4 text-xs font-bold uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none min-w-[160px] text-center"
+          >
+            <option value="all">🌐 All Departments</option>
+            {departments.map(dept => (
+              <option key={dept.id} value={dept.id.toString()}>{dept.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm shadow-xl shadow-black/5">
@@ -113,7 +131,7 @@ export default function PermissionMatrixPage() {
               <th className="p-6 text-left min-w-[320px]">
                 <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest px-1">Module & Action</span>
               </th>
-              {roles.map(role => (
+              {filteredRoles.map(role => (
                 <th key={role.id} className="p-6 text-center min-w-[180px] border-l border-border/10">
                   <div className="space-y-4">
                     <p className="font-bold text-xs text-foreground tracking-tight px-2">{role.name}</p>
@@ -135,7 +153,7 @@ export default function PermissionMatrixPage() {
             {Object.entries(groupedMatrix).map(([module, actions]) => (
               <React.Fragment key={module}>
                 <tr className="bg-primary/[0.03]">
-                  <td colSpan={roles.length + 1} className="px-6 py-3 font-black text-[10px] text-primary uppercase tracking-[0.2em] bg-primary/10 border-y border-border/20">
+                  <td colSpan={filteredRoles.length + 1} className="px-6 py-3 font-black text-[10px] text-primary uppercase tracking-[0.2em] bg-primary/10 border-y border-border/20">
                     <div className="flex items-center gap-2">
                        <span className="opacity-70 text-xs">📂</span>
                        <span>{module} System</span>
@@ -154,7 +172,7 @@ export default function PermissionMatrixPage() {
                         </span>
                       </div>
                     </td>
-                    {roles.map(role => {
+                    {filteredRoles.map(role => {
                       const activePermIdForRole = matrix[role.id]?.find(mId => perms.some(p => p.id === mId))
                       
                       return (
@@ -197,6 +215,12 @@ export default function PermissionMatrixPage() {
         </table>
       </div>
       
+      {filteredRoles.length === 0 && (
+        <div className="p-20 text-center bg-muted/10 rounded-2xl border-2 border-dashed border-border/40">
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">No roles found for this department induction.</p>
+        </div>
+      )}
+
       <div className="flex justify-between items-center px-6 py-4 bg-muted/20 rounded-xl border border-border/30">
         <div className="flex items-center gap-4">
            <div className="flex items-center gap-1.5">

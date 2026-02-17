@@ -144,7 +144,7 @@ export default function EmployeesPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/40">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Staff List</h1>
-          <p className="text-muted-foreground text-xs font-medium mt-1">View and edit your team here.</p>
+          <p className="text-muted-foreground text-xs font-medium mt-1">View and manage your staff and departments here.</p>
         </div>
         <Button 
           onClick={() => { resetForm(); setIsModalOpen(true); }}
@@ -188,7 +188,7 @@ export default function EmployeesPage() {
           <thead>
             <tr className="bg-muted/30 border-b border-border/40">
               <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Employee</th>
-              <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">ID & Team</th>
+              <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">ID & Department</th>
               <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Role</th>
               <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Reporting To</th>
               <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Status</th>
@@ -242,7 +242,7 @@ export default function EmployeesPage() {
           <Card className="max-w-2xl w-full rounded-2xl shadow-2xl border border-border/40 overflow-hidden animate-in zoom-in duration-300">
             <CardHeader className="bg-muted/10 border-b border-border/30 pb-6 pt-8 px-10">
               <CardTitle className="text-xl font-semibold tracking-tight">
-                {editingEmp ? "Edit Staff Info" : isPromoting ? "Add to Team" : "New Staff"}
+                {editingEmp ? "Edit Staff Info" : isPromoting ? "Add to Dept" : "New Staff"}
               </CardTitle>
               <CardDescription className="text-xs font-medium mt-1.5">
                 {isPromoting 
@@ -284,15 +284,15 @@ export default function EmployeesPage() {
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Team</Label>
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Department</Label>
                   <div className="relative">
                     <select 
                       value={formData.departmentId} 
-                      onChange={(e) => setFormData({...formData, departmentId: e.target.value})}
+                      onChange={(e) => setFormData({...formData, departmentId: e.target.value, roleId: ""})}
                       className="w-full h-10 rounded-lg border border-border/40 px-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 bg-card appearance-none cursor-pointer"
                       required
                     >
-                      <option value="">Select Team</option>
+                      <option value="">Select Department</option>
                       {departments.map((d: any) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-30 text-[8px]">▼</div>
@@ -307,9 +307,14 @@ export default function EmployeesPage() {
                       onChange={(e) => setFormData({...formData, roleId: e.target.value})}
                       className="w-full h-10 rounded-lg border border-border/40 px-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 bg-card appearance-none cursor-pointer"
                       required
+                      disabled={!formData.departmentId}
                     >
-                      <option value="">Select Job Role</option>
-                      {roles.map((r: any) => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
+                      <option value="">{formData.departmentId ? "Select Job Role" : "Select Department First"}</option>
+                      {roles
+                        .filter((r: any) => !r.departmentId || r.departmentId === parseInt(formData.departmentId))
+                        .map((r: any) => (
+                          <option key={r.id} value={String(r.id)}>{r.name}</option>
+                        ))}
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-30 text-[8px]">▼</div>
                   </div>
@@ -324,9 +329,12 @@ export default function EmployeesPage() {
                       className="w-full h-10 rounded-lg border border-border/40 px-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 bg-card appearance-none cursor-pointer"
                     >
                       <option value="">No Manager</option>
-                      {employees.filter(e => e.id !== editingEmp?.id).map((e: any) => (
-                        <option key={e.id} value={String(e.id)}>{e.firstName} {e.lastName}</option>
-                      ))}
+                      {employees
+                        .filter(e => e.id !== editingEmp?.id)
+                        .filter(e => !formData.departmentId || e.departmentId === parseInt(formData.departmentId))
+                        .map((e: any) => (
+                          <option key={e.id} value={String(e.id)}>{e.firstName} {e.lastName}</option>
+                        ))}
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-30 text-[8px]">▼</div>
                   </div>
@@ -363,7 +371,7 @@ export default function EmployeesPage() {
               <div className="flex gap-3 pt-6">
                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 rounded-lg h-10 font-semibold text-xs uppercase tracking-wider">Cancel</Button>
                 <Button type="submit" className="flex-1 rounded-lg h-10 font-bold text-xs shadow-lg shadow-primary/10 uppercase tracking-wider">
-                  {editingEmp ? "Save Changes" : isPromoting ? "Add to Team" : "Add Staff"}
+                  {editingEmp ? "Save Changes" : isPromoting ? "Add to Dept" : "Add Staff"}
                 </Button>
               </div>
             </form>

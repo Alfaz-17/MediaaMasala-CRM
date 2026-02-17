@@ -3,7 +3,8 @@ import {
   getDepartments, createDepartment, updateDepartment,
   getRoles, createRole, updateRole,
   getAllPermissions, getRolePermissions, syncRolePermissions,
-  getEmployees, createEmployee, updateEmployee, getPendingUsers
+  getEmployees, createEmployee, updateEmployee, getPendingUsers,
+  getPermissionMatrix
 } from '../controllers/adminController';
 import { authenticateToken, checkPermission } from '../middleware/auth';
 
@@ -32,6 +33,7 @@ router.patch('/roles/:id', checkPermission('employees', 'manage'), updateRole);
 
 // Permissions
 router.get('/permissions', checkPermission('employees', 'manage'), getAllPermissions);
+router.get('/permissions-matrix', checkPermission('employees', 'manage'), getPermissionMatrix);
 router.get('/roles/:roleId/permissions', checkPermission('employees', 'view'), getRolePermissions);
 router.post('/roles/:roleId/permissions/sync', checkPermission('employees', 'manage'), syncRolePermissions);
 

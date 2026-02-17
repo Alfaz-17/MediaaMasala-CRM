@@ -15,12 +15,21 @@ interface Role {
   code: string
   description: string
   isActive: boolean
+  departmentId: number | null
+  department?: { name: string }
   _count: { employees: number }
+}
+
+interface Department {
+  id: number
+  name: string
+  code: string
 }
 
 export default function RolesPage() {
   const { data: session } = useSession()
   const [roles, setRoles] = useState<Role[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
@@ -29,21 +38,26 @@ export default function RolesPage() {
   const [name, setName] = useState("")
   const [code, setCode] = useState("")
   const [description, setDescription] = useState("")
+  const [departmentId, setDepartmentId] = useState<string>("")
   const [isActive, setIsActive] = useState(true)
 
-  const fetchRoles = async () => {
+  const fetchData = async () => {
     try {
-      const data = await apiClient.get("/admin/roles")
-      setRoles(data)
+      const [rolesData, deptsData] = await Promise.all([
+        apiClient.get("/admin/roles"),
+        apiClient.get("/admin/departments")
+      ])
+      setRoles(rolesData)
+      setDepartments(deptsData)
     } catch (err) {
-      console.error("Error fetching roles:", err)
+      console.error("Error fetching data:", err)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (session) fetchRoles()
+    if (session) fetchData()
   }, [session])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,13 +66,21 @@ export default function RolesPage() {
       ? `/admin/roles/${editingRole.id}`
       : "/admin/roles"
     
+    const payload = { 
+      name, 
+      code, 
+      description, 
+      isActive,
+      departmentId: departmentId ? parseInt(departmentId) : null
+    }
+
     try {
       if (editingRole) {
-        await apiClient.patch(url, { name, code, description, isActive })
+        await apiClient.patch(url, payload)
       } else {
-        await apiClient.post(url, { name, code, description, isActive })
+        await apiClient.post(url, payload)
       }
-      fetchRoles()
+      fetchData()
       setIsModalOpen(false)
       resetForm()
     } catch (err: any) {
@@ -71,6 +93,7 @@ export default function RolesPage() {
     setName("")
     setCode("")
     setDescription("")
+    setDepartmentId("")
     setIsActive(true)
     setEditingRole(null)
   }
@@ -80,6 +103,7 @@ export default function RolesPage() {
     setName(role.name)
     setCode(role.code)
     setDescription(role.description || "")
+    setDepartmentId(role.departmentId?.toString() || "")
     setIsActive(role.isActive)
     setIsModalOpen(true)
   }
@@ -119,7 +143,14 @@ export default function RolesPage() {
                 </div>
               </div>
               <div className="min-h-[4.5rem]">
-                <h3 className={`font-semibold text-sm tracking-tight ${role.isActive ? "text-foreground/90" : "text-muted-foreground/40"}`}>{role.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className={`font-semibold text-sm tracking-tight ${role.isActive ? "text-foreground/90" : "text-muted-foreground/40"}`}>{role.name}</h3>
+                  {role.department && (
+                    <Badge variant="outline" className="text-[7px] font-black uppercase tracking-tighter h-3.5 border-primary/20 text-primary/60">
+                      {role.department.name}
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-[11px] text-muted-foreground/60 font-medium mt-1.5 line-clamp-2 leading-relaxed">{role.description || "Operational parameters not defined."}</p>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-border/20">
@@ -150,6 +181,21 @@ export default function RolesPage() {
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Callsign (Code)</Label>
                 <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g., OPS_LEAD" required className="rounded-lg border-border/40 h-10 text-xs font-bold uppercase tracking-widest tabular-nums" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Department</Label>
+                <select
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  className="w-full h-10 rounded-lg border border-border/40 bg-card px-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none"
+                >
+                  <option value="">Global / No Department</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id.toString()}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Authority Scope</Label>

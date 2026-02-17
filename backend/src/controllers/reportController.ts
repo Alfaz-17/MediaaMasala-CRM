@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 export const getSalesReport = async (req: Request, res: Response) => {
   const user = (req as any).user;
@@ -13,11 +14,7 @@ export const getSalesReport = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
       whereClause.departmentId = user.departmentId;
     } else if (scope === 'team') {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       whereClause.ownerId = { in: [user.employeeId, ...reporteeIds] };
     }
 
@@ -83,11 +80,7 @@ export const getProductivityReport = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
       employeeWhere.departmentId = user.departmentId;
     } else if (scope === 'team') {
-      const emp = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = emp?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       employeeWhere.id = { in: [user.employeeId, ...reporteeIds] };
     }
 
@@ -160,11 +153,7 @@ export const getAttendanceReport = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
       whereClause.employee = { departmentId: user.departmentId };
     } else if (scope === 'team') {
-      const emp = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = emp?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       whereClause.employeeId = { in: [user.employeeId, ...reporteeIds] };
     }
 

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/logger';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 const employeeSelect = {
   id: true,
@@ -51,11 +52,7 @@ export const getTasks = async (req: Request, res: Response) => {
         { creator: { departmentId: user.departmentId } }
       ];
     } else if (scope === 'team') {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       const teamIds = [user.employeeId, ...reporteeIds];
       whereClause.OR = [
         { assigneeId: { in: teamIds } },
@@ -134,7 +131,21 @@ export const getTaskById = async (req: Request, res: Response) => {
 
     // RBAC Scope Check
     if (scope === 'own' && task.assigneeId !== user.employeeId && task.creatorId !== user.employeeId) {
-      return res.status(403).json({ message: 'Access denied' });
+      return res.status(403).json({ message: 'Access denied: Task does not belong to you' });
+    }
+    if (scope === 'department') {
+      const assigneeDeptId = task.assignee?.departmentId;
+      const creatorDeptId = task.creator?.departmentId;
+      if (assigneeDeptId !== user.departmentId && creatorDeptId !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied: Task belongs to another department' });
+      }
+    }
+    if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      const teamIds = [user.employeeId, ...reporteeIds];
+      if (!teamIds.includes(task.assigneeId) && !teamIds.includes(task.creatorId)) {
+        return res.status(403).json({ message: 'Access denied: Task is not in your team scope' });
+      }
     }
 
     res.json(task);

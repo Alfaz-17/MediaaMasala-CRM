@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/logger';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 export const getProjects = async (req: Request, res: Response) => {
   const user = (req as any).user;
@@ -16,12 +17,7 @@ export const getProjects = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
        whereClause.lead = { departmentId: user.departmentId };
     } else if (scope === 'team') {
-       // Team logic for projects
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
     }
 
@@ -63,11 +59,7 @@ export const getProjectById = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
        whereClause.lead = { departmentId: user.departmentId };
     } else if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
     }
 
@@ -120,11 +112,7 @@ export const updateProject = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
        whereClause.lead = { departmentId: user.departmentId };
     } else if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
     }
 
@@ -195,8 +183,21 @@ export const deleteProject = async (req: Request, res: Response) => {
   const scope = (req as any).permissionScope; // Should check if user has permission to delete this specific project
 
   try {
-    // 1. Check existence and permissions (simplify for now, assuming role check passed)
-    // Ideally we should check if project belongs to user/team based on scope
+    // 1. Check access first
+    let whereClause: any = { id: Number(id) };
+    if (scope === 'own' || scope === 'assigned') {
+       whereClause.lead = { ownerId: user.employeeId };
+    } else if (scope === 'department') {
+       whereClause.lead = { departmentId: user.departmentId };
+    } else if (scope === 'team') {
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+       whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
+    }
+
+    const existingProject = await (prisma as any).project.findFirst({ where: whereClause });
+    if (!existingProject) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
     
     await (prisma as any).project.delete({
       where: { id: Number(id) }

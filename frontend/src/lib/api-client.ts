@@ -4,14 +4,28 @@ import { getSession } from "next-auth/react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
 
+let cachedToken: string | null = null;
+let lastFetchTime: number = 0;
+const CACHE_DURATION = 30000; // 30 seconds
+
 async function getAuthHeaders() {
-  const session = await getSession()
-  const token = (session?.user as any)?.accessToken
+  const now = Date.now();
+  
+  if (cachedToken && (now - lastFetchTime < CACHE_DURATION)) {
+    return {
+      "Authorization": `Bearer ${cachedToken}`,
+      "Content-Type": "application/json",
+    };
+  }
+
+  const session = await getSession();
+  cachedToken = (session?.user as any)?.accessToken || null;
+  lastFetchTime = now;
   
   return {
-    "Authorization": token ? `Bearer ${token}` : "",
+    "Authorization": cachedToken ? `Bearer ${cachedToken}` : "",
     "Content-Type": "application/json",
-  }
+  };
 }
 
 export const apiClient = {

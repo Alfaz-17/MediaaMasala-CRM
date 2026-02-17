@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/logger';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 const employeeSelect = {
   id: true,
@@ -27,11 +28,7 @@ export const getLeads = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
       whereClause.departmentId = user.departmentId;
     } else if (scope === 'team') {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       whereClause.ownerId = { in: [user.employeeId, ...reporteeIds] };
     }
 
@@ -133,11 +130,7 @@ export const getLeadById = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied: Sale belongs to another department' });
     }
     if (scope === 'team') {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
         return res.status(403).json({ message: 'Access denied: Sale is not owned by you or your team' });
       }
@@ -207,11 +200,7 @@ export const updateLead = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied: Lead belongs to another department' });
     }
     if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        if (existingLead.ownerId !== user.employeeId && !reporteeIds.includes(existingLead.ownerId as number)) {
          return res.status(403).json({ message: 'Access denied: Lead not in your team scope' });
        }
@@ -277,11 +266,7 @@ export const addLeadNote = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied' });
     }
     if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
          return res.status(403).json({ message: 'Access denied' });
        }
@@ -334,11 +319,7 @@ export const addFollowUp = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied' });
     }
     if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
          return res.status(403).json({ message: 'Access denied' });
        }
@@ -402,11 +383,7 @@ export const assignLead = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied' });
     }
     if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
          return res.status(403).json({ message: 'Access denied' });
        }
@@ -461,11 +438,7 @@ export const deleteLead = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied' });
     }
     if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
          return res.status(403).json({ message: 'Access denied' });
        }
@@ -500,11 +473,7 @@ export const convertToProject = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied' });
     }
     if (scope === 'team') {
-       const employee = await prisma.employee.findUnique({
-         where: { id: user.employeeId },
-         include: { reportees: true }
-       });
-       const reporteeIds = employee?.reportees.map(r => r.id) || [];
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
        if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
          return res.status(403).json({ message: 'Access denied' });
        }

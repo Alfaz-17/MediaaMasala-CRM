@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { startOfDay, endOfDay } from 'date-fns';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 // Helper to determine the filter based on module name and permission scope
 // Optimization: Cache team IDs per request if needed
@@ -32,12 +33,8 @@ const getModuleWhere = async (user: any, moduleName: string, cachedTeamIds?: num
   if (scope === 'team') {
     let teamIds = cachedTeamIds;
     if (!teamIds) {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
-      teamIds = [user.employeeId, ...reporteeIds];
+      teamIds = await getRecursiveReporteeIds(user.employeeId);
+      teamIds = [user.employeeId, ...teamIds];
     }
 
     if (moduleName === 'leads') return { ownerId: { in: teamIds } };
@@ -62,11 +59,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
     let teamIds: number[] | undefined;
     if (user.role !== 'ADMIN') {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       teamIds = [user.employeeId, ...reporteeIds];
     }
 
@@ -136,11 +129,7 @@ export const getRecentActivity = async (req: Request, res: Response) => {
   try {
     let teamIds: number[] | undefined;
     if (user.role !== 'ADMIN') {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       teamIds = [user.employeeId, ...reporteeIds];
     }
 

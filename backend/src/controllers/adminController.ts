@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 const employeeSelect = {
   id: true,
@@ -39,11 +40,7 @@ export const getEmployees = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
       whereClause.departmentId = user.departmentId;
     } else if (scope === 'team') {
-      const employee = await prisma.employee.findUnique({
-        where: { id: user.employeeId },
-        include: { reportees: true }
-      });
-      const reporteeIds = employee?.reportees.map(r => r.id) || [];
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       whereClause.id = { in: [user.employeeId, ...reporteeIds] };
     }
 
@@ -80,6 +77,12 @@ export const createEmployee = async (req: Request, res: Response) => {
       let user = await tx.user.findUnique({ where: { email } });
 
       if (user) {
+        // Validation: Role must belong to Department (or be global)
+        const role = await tx.role.findUnique({ where: { id: Number(roleId) } });
+        if (role && role.departmentId && role.departmentId !== Number(departmentId)) {
+          throw new Error('Selected role does not belong to the selected department');
+        }
+
         user = await tx.user.update({
           where: { id: user.id },
           data: {
@@ -88,6 +91,12 @@ export const createEmployee = async (req: Request, res: Response) => {
           }
         });
       } else {
+        // Validation: Role must belong to Department (or be global)
+        const role = await tx.role.findUnique({ where: { id: Number(roleId) } });
+        if (role && role.departmentId && role.departmentId !== Number(departmentId)) {
+          throw new Error('Selected role does not belong to the selected department');
+        }
+
         // Validation: New user must have a password
         if (!password) {
           throw new Error('Password is required for new account induction');
@@ -153,6 +162,12 @@ export const updateEmployee = async (req: Request, res: Response) => {
             // If scope is 'department' or 'team', we should verify here too, 
             // but for now we'll assume the frontend/middleware handles the initial list filtering.
             
+            // Validation: Role must belong to Department (or be global)
+            const role = await tx.role.findUnique({ where: { id: Number(roleId) } });
+            if (role && role.departmentId && role.departmentId !== Number(departmentId)) {
+                throw new Error('Selected role does not belong to the selected department');
+            }
+
             const emp = await tx.employee.update({
                 where: { id: employeeId },
                 data: {
@@ -252,9 +267,17 @@ export const updateDepartment = async (req: Request, res: Response) => {
 // --- ROLE CRUD ---
 
 export const getRoles = async (req: Request, res: Response) => {
+  const { departmentId } = req.query;
   try {
+    const whereClause: any = {};
+    if (departmentId) {
+      whereClause.departmentId = Number(departmentId);
+    }
+
     const roles = await prisma.role.findMany({
+      where: whereClause,
       include: {
+        department: { select: { name: true, code: true } },
         _count: { select: { employees: true } }
       }
     });
@@ -265,10 +288,15 @@ export const getRoles = async (req: Request, res: Response) => {
 };
 
 export const createRole = async (req: Request, res: Response) => {
-  const { name, code, description } = req.body;
+  const { name, code, description, departmentId } = req.body;
   try {
     const role = await prisma.role.create({
-      data: { name, code, description }
+      data: { 
+        name, 
+        code, 
+        description,
+        departmentId: departmentId ? Number(departmentId) : null
+      }
     });
     res.status(201).json(role);
   } catch (error) {
@@ -278,11 +306,17 @@ export const createRole = async (req: Request, res: Response) => {
 
 export const updateRole = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, code, description, isActive } = req.body;
+  const { name, code, description, isActive, departmentId } = req.body;
   try {
     const role = await prisma.role.update({
       where: { id: Number(id) },
-      data: { name, code, description, isActive }
+      data: { 
+        name, 
+        code, 
+        description, 
+        isActive,
+        departmentId: departmentId ? Number(departmentId) : null
+      }
     });
     res.json(role);
   } catch (error) {
@@ -331,5 +365,50 @@ export const syncRolePermissions = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Sync error:', error);
     res.status(500).json({ message: 'Error syncing permissions' });
+  }
+};
+
+export const getPermissionMatrix = async (req: Request, res: Response) => {
+  const { departmentId } = req.query;
+  
+  try {
+    const whereRole: any = {};
+    if (departmentId && departmentId !== 'all') {
+      whereRole.OR = [
+        { departmentId: Number(departmentId) },
+        { departmentId: null } // Show global roles always
+      ];
+    }
+
+    const [roles, permissions, rolePermissions] = await Promise.all([
+      prisma.role.findMany({
+        where: whereRole,
+        select: { id: true, name: true, code: true, departmentId: true }
+      }),
+      prisma.permission.findMany(),
+      prisma.rolePermission.findMany()
+    ]);
+
+    // Build the matrix: { roleId: permIds[] }
+    const matrix: Record<number, number[]> = {};
+    
+    // Initialize for all roles found
+    roles.forEach(r => { matrix[r.id] = []; });
+    
+    // Populate with actual permissions
+    rolePermissions.forEach(rp => {
+      if (matrix[rp.roleId]) {
+        matrix[rp.roleId].push(rp.permissionId);
+      }
+    });
+
+    res.json({
+      roles,
+      permissions,
+      matrix
+    });
+  } catch (error) {
+    console.error('Matrix fetch error:', error);
+    res.status(500).json({ message: 'Error fetching permission matrix' });
   }
 };

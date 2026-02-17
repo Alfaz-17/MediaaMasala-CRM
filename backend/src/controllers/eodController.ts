@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 export const submitEod = async (req: Request, res: Response) => {
   const { content, leadsCount, tasksCount, date } = req.body;
@@ -39,11 +40,7 @@ export const getEodReports = async (req: Request, res: Response) => {
     } else if (scope === 'department') {
       whereClause.employee = { departmentId: user.departmentId };
     } else if (scope === 'team') {
-        const employee = await prisma.employee.findUnique({
-            where: { id: user.employeeId },
-            include: { reportees: true }
-        });
-        const reporteeIds = employee?.reportees.map(r => r.id) || [];
+        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
         whereClause.employeeId = { in: [user.employeeId, ...reporteeIds] };
     }
 
