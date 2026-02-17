@@ -116,7 +116,7 @@ export default function DashboardPage() {
             Welcome back, {user?.email?.split('@')[0]}
           </h1>
           <p className="text-muted-foreground text-[13px] font-medium leading-relaxed">
-            Here's what's happening across your sales and missions today.
+            Here's what's happening across your sales and tasks today.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -124,13 +124,13 @@ export default function DashboardPage() {
              <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest leading-none">System Status</span>
              <span className="text-[11px] font-bold text-success flex items-center gap-1.5 mt-1.5 uppercase tracking-wide">
                <div className="h-1.5 w-1.5 rounded-full bg-success"></div>
-               Nominal
+               Online
              </span>
            </div>
            <div className="h-8 w-px bg-border/40 mx-1"></div>
            <div className="flex flex-col items-start px-3">
-             <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest leading-none">Synchronized</span>
-             <span className="text-[11px] font-bold text-foreground mt-1.5 uppercase tracking-wide">Real-time</span>
+              <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest leading-none">Updated</span>
+              <span className="text-[11px] font-bold text-foreground mt-1.5 uppercase tracking-wide">Real-time</span>
            </div>
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function DashboardPage() {
         {canViewLeads && (
           <Card className="shadow-sm bg-background group border-border/50 rounded-lg hover:border-primary/30 transition-all duration-300">
              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardDescription className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Total Opportunities</CardDescription>
+                <CardDescription className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Total Leads</CardDescription>
                 <Users className="h-3.5 w-3.5 text-muted-foreground/40" />
              </CardHeader>
              <CardContent>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
                 <div className="mt-4">
                    <Badge variant="outline" className="gap-1 rounded-full px-2 py-0 text-[9px] bg-primary/5 font-bold border-none text-primary uppercase tracking-wider">
                       <TrendingUp className="size-2.5" />
-                      <span>Optimized</span>
+                      <span>Progress</span>
                    </Badge>
                 </div>
              </CardContent>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
         {canViewTasks && (
           <Card className="shadow-sm bg-background group border-border/50 rounded-lg hover:border-blue-500/30 transition-all duration-300">
              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardDescription className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Daily Missions</CardDescription>
+                <CardDescription className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Daily Tasks</CardDescription>
                 <CheckSquare className="h-3.5 w-3.5 text-muted-foreground/40" />
              </CardHeader>
              <CardContent>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
         {canViewTasks && (
           <Card className="shadow-sm bg-background group border-border/50 rounded-lg hover:border-destructive/30 transition-all duration-300">
              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardDescription className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Attention Required</CardDescription>
+                <CardDescription className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Overdue Tasks</CardDescription>
                 <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground/40" />
              </CardHeader>
              <CardContent>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
                   {stats?.personal.myLeads || 0}
                 </div>
                 <div className="mt-4">
-                   <p className="text-[10px] font-bold text-primary-foreground/60 uppercase tracking-widest">Growth Phase</p>
+                   <p className="text-[10px] font-bold text-primary-foreground/60 uppercase tracking-widest">In Progress</p>
                 </div>
              </CardContent>
           </Card>
@@ -219,7 +219,7 @@ export default function DashboardPage() {
           <CardHeader className="py-4 px-6 border-b border-border/40 flex flex-row items-center justify-between">
              <div className="space-y-0.5">
                 <CardTitle className="text-sm font-bold text-foreground tracking-tight uppercase tracking-[0.05em]">Activity Stream</CardTitle>
-                <CardDescription className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">Live Updates</CardDescription>
+                <CardDescription className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">Recent Activity</CardDescription>
              </div>
              <Button variant="ghost" size="sm" className="h-8 rounded-md text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground" onClick={() => refetchActivity()}>
                Refresh
@@ -256,7 +256,7 @@ export default function DashboardPage() {
                    <div className="h-12 w-12 rounded-full bg-muted/20 flex items-center justify-center mb-6 border border-border/40">
                      <Activity className="h-5 w-5 text-muted-foreground/10" />
                    </div>
-                   <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">Silent Horizon</p>
+                   <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">No activity found</p>
                 </div>
               )}
             </div>
@@ -264,7 +264,7 @@ export default function DashboardPage() {
           <div className="bg-muted/5 p-3 border-t border-border/40 text-center">
              {canViewLeads && (
                <Button variant="link" className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest h-auto p-0 hover:text-primary transition-colors" onClick={() => router.push("/dashboard/leads")}>
-                 Full Audit Log →
+                 View All Leads →
                </Button>
              )}
           </div>
@@ -274,7 +274,7 @@ export default function DashboardPage() {
         <div className="space-y-6">
            <Card className="border-border/40 bg-background shadow-sm rounded-lg overflow-hidden">
              <CardHeader className="pb-4 pt-6 px-6">
-                <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Quick Access</CardTitle>
+                <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Quick Actions</CardTitle>
              </CardHeader>
              <CardContent className="space-y-2 px-4 pb-6">
                 {canCreateLeads && (
@@ -314,7 +314,7 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 <div className="space-y-3">
                    <div className="flex justify-between items-end">
-                      <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">System Velocity</span>
+                       <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Goal Progress</span>
                       <span className="text-[11px] font-bold tabular-nums">94.2%</span>
                    </div>
                    <div className="h-1 w-full bg-muted/50 rounded-full overflow-hidden">
@@ -324,12 +324,12 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="p-4 rounded-lg border border-border/40 bg-muted/20">
-                      <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5 leading-none">Yield</p>
-                      <p className="text-xl font-semibold tracking-tight tabular-nums">{stats?.personal.myLeads || 0}</p>
+                       <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5 leading-none">Active Leads</p>
+                       <p className="text-xl font-semibold tracking-tight tabular-nums">{stats?.personal.myLeads || 0}</p>
                    </div>
                    <div className="p-4 rounded-lg border border-border/40 bg-muted/20">
-                      <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5 leading-none">Cycles</p>
-                      <p className="text-xl font-semibold tracking-tight tabular-nums text-blue-500">{stats?.personal.myTasksDueToday || 0}</p>
+                       <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-1.5 leading-none">Today's Tasks</p>
+                       <p className="text-xl font-semibold tracking-tight tabular-nums text-blue-500">{stats?.personal.myTasksDueToday || 0}</p>
                    </div>
                 </div>
               </div>

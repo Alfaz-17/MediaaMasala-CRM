@@ -191,13 +191,13 @@ export default function LeadsPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/40">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Leads Management</h1>
-            <p className="text-muted-foreground text-[13px] font-medium leading-relaxed">View and track all sales opportunities across the company.</p>
+            <p className="text-muted-foreground text-[13px] font-medium leading-relaxed">View and track all leads across the company.</p>
           </div>
           
           <div className="flex items-center gap-3">
              {canCreate && (
                <Button onClick={() => router.push("/dashboard/leads/new")} className="rounded-lg h-9 font-semibold text-xs px-4 shadow-sm border border-primary/20">
-                 <Plus className="mr-2 h-3.5 w-3.5" /> Add Opportunity
+                 <Plus className="mr-2 h-3.5 w-3.5" /> Add Lead
                </Button>
              )}
           </div>
@@ -273,7 +273,7 @@ export default function LeadsPage() {
                   <thead>
                     <tr className="bg-muted/30 border-b border-border/40">
                       <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Name</th>
-                      <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Entity</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Company</th>
                       <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Source</th>
                       <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Status</th>
                       <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Actions</th>
@@ -362,7 +362,7 @@ export default function LeadsPage() {
                     </div>
                     <div className="pt-3 border-t border-border/30 flex items-center justify-between">
                       <div className="flex flex-col">
-                         <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-40">Custodian</span>
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-40">Owner</span>
                          <span className="text-[10px] font-semibold text-foreground tracking-tight">
                           {lead.owner ? `${lead.owner.firstName}` : "Unassigned"}
                          </span>
@@ -405,7 +405,7 @@ export default function LeadsPage() {
         {filteredLeads.length > 0 && (
           <div className="flex items-center justify-between py-6 border-t border-border/40 mt-8">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest opacity-50">
-              Total Leads: <span className="text-foreground/70 font-bold tabular-nums">{filteredLeads.length} Items</span>
+              List Information: <span className="text-foreground/70 font-bold tabular-nums">{filteredLeads.length} Items</span>
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="h-9 px-3 font-semibold text-[9px] rounded-lg border-border/50" disabled>Previous</Button>

@@ -39,7 +39,7 @@ function SidebarContent({ pathname, filteredNav, canSeeSettings, isAdmin, handle
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-sm tracking-tight leading-none">Media Masala</span>
-            <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Enterprise CRM</span>
+            <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">CRM System</span>
           </div>
         </Link>
       </div>
@@ -144,7 +144,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
     { href: "/dashboard/portfolio", label: "Portfolio", icon: Layers, module: "projects" },
     { href: "/dashboard/leads", label: "Leads", icon: Users, module: "leads" },
     { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare, module: "tasks" },
-    { href: "/dashboard/eod", label: "EOD Reports", icon: FileText, module: "eod" },
+    { href: "/dashboard/eod", label: "Daily Reports", icon: FileText, module: "eod" },
     { href: "/dashboard/attendance", label: "Attendance", icon: CheckSquare, module: "attendance" },
     { href: "/dashboard/attendance/leaves", label: "Leaves", icon: Calendar, module: "attendance" },
     { href: "/dashboard/reports", label: "Reports", icon: FileText, module: "reports" },

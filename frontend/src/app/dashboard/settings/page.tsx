@@ -27,7 +27,7 @@ const SETTINGS_CARDS = [
     color: "bg-green-50 text-green-600"
   },
   {
-    title: "Permission Matrix",
+    title: "Permission Settings",
     description: "Fine-tune what each role can see and do.",
     href: "/dashboard/settings/permissions",
     icon: "🕸️",
@@ -43,9 +43,9 @@ export default function SettingsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="text-6xl mb-6">🔒</div>
-        <h1 className="text-3xl font-black text-gray-900">Access Restricted</h1>
+        <h1 className="text-3xl font-black text-gray-900">Access Denied</h1>
         <p className="text-gray-500 max-w-sm mt-2 font-medium">
-          Only administrators can access organization settings. Please contact your manager if you believe you should have access.
+          Only administrators can access system settings. Please contact your manager if you believe you should have access.
         </p>
       </div>
     )
@@ -55,7 +55,7 @@ export default function SettingsPage() {
     <div className="space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">System Settings</h1>
-        <p className="text-muted-foreground text-xs font-medium mt-1">Manage your organization&apos;s configuration and access control.</p>
+        <p className="text-muted-foreground text-xs font-medium mt-1">Manage settings and who can see what.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

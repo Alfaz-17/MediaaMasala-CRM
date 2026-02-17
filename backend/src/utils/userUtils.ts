@@ -6,22 +6,26 @@ import prisma from '../lib/prisma';
  * @returns A promise that resolves to an array of employee IDs.
  */
 export async function getRecursiveReporteeIds(managerId: number): Promise<number[]> {
-  const directReportees = await prisma.employee.findMany({
-    where: { managerId },
-    select: { id: true }
+  // Fetch all employees once to build the hierarchy in memory
+  // This is much faster than recursive DB queries for small to medium organizations
+  const allEmployees = await prisma.employee.findMany({
+    select: { id: true, managerId: true }
   });
 
-  const directReporteeIds = directReportees.map(r => r.id);
-  
-  if (directReporteeIds.length === 0) {
-    return [];
+  const reporteeIds: number[] = [];
+  const queue = [managerId];
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    const directReportees = allEmployees.filter(e => e.managerId === currentId);
+    
+    for (const reportee of directReportees) {
+      if (!reporteeIds.includes(reportee.id)) {
+        reporteeIds.push(reportee.id);
+        queue.push(reportee.id);
+      }
+    }
   }
 
-  // Recursive call for each direct reportee
-  const nestedReportees = await Promise.all(
-    directReporteeIds.map(id => getRecursiveReporteeIds(id))
-  );
-
-  // Flatten and return
-  return [...directReporteeIds, ...nestedReportees.flat()];
+  return reporteeIds;
 }

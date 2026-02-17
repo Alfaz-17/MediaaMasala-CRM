@@ -222,7 +222,7 @@ function PortfolioContent() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/40">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Portfolio</h1>
-          <p className="text-muted-foreground text-sm font-medium">Manage software products and client engagements.</p>
+          <p className="text-muted-foreground text-sm font-medium">Manage products and projects.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -257,7 +257,7 @@ function PortfolioContent() {
                     activeTab === 'projects' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
             >
-                Client Projects
+                Projects
             </button>
         </div>
 
@@ -388,7 +388,7 @@ function PortfolioContent() {
                             <form onSubmit={handleProjectSubmit}>
                                 <DialogHeader>
                                     <DialogTitle>{editingItem ? 'Edit Project' : 'New Client Project'}</DialogTitle>
-                                    <DialogDescription>Define the project engagement details.</DialogDescription>
+                                    <DialogDescription>Define the project details.</DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                     <div className="space-y-2">

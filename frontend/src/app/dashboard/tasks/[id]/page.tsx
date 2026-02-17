@@ -203,11 +203,11 @@ export default function TaskDetailPage() {
                   <div className="bg-success/5 border border-success/20 p-6 rounded-xl animate-in zoom-in duration-500">
                      <div className="flex items-center gap-2 mb-3">
                         <span className="text-success text-xs">✅</span>
-                        <span className="text-[9px] font-bold text-success uppercase tracking-widest">Notes on completion</span>
+                        <span className="text-[9px] font-bold text-success uppercase tracking-widest">Completion notes</span>
                      </div>
                      <p className="text-xs font-semibold text-success/80 italic leading-relaxed mb-4">&quot;{task.completionNote}&quot;</p>
                      <div className="flex items-center gap-2 text-[10px] font-bold text-success/40 uppercase tracking-widest tabular-nums">
-                        <Clock className="h-3 w-3" /> Terminated at {new Date(task.completedAt!).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+                        <Clock className="h-3 w-3" /> Completed on {new Date(task.completedAt!).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
                      </div>
                   </div>
                 )}
@@ -278,7 +278,7 @@ export default function TaskDetailPage() {
               <Card className="rounded-xl border-border/40 bg-card p-6 shadow-xs group cursor-pointer hover:border-primary/40 transition-all" onClick={() => router.push(`/dashboard/leads/${task.lead?.id}`)}>
                 <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <ShoppingBag className="h-3 w-3 opacity-50" />
-                  Related Sale
+                  Related Lead
                 </p>
                 <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-lg bg-primary/5 flex items-center justify-center text-primary font-bold text-sm border border-primary/10 shadow-xs">
@@ -352,7 +352,7 @@ export default function TaskDetailPage() {
            </Card>
 
            <div className="pt-4 px-2">
-              <p className="text-[8px] font-bold text-muted-foreground/30 uppercase tracking-[0.4em] text-center italic">CRM Operational Core v2.5</p>
+              <p className="text-[8px] font-bold text-muted-foreground/30 uppercase tracking-[0.4em] text-center italic">Task Management System</p>
            </div>
         </div>
       </div>
@@ -368,7 +368,7 @@ export default function TaskDetailPage() {
                  <p className="text-muted-foreground font-medium text-xs mt-1.5 opacity-80">Submit your final report for this task.</p>
               </div>
               <div className="space-y-1.5">
-                 <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Notes on completion</Label>
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Completion notes</Label>
                  <textarea 
                     className="w-full h-32 rounded-lg bg-muted/30 border border-border/40 font-medium text-xs p-3.5 outline-none focus:ring-1 focus:ring-primary/40 resize-none tabular-nums"
                     placeholder="Provide a summary of the outcome..."
@@ -383,7 +383,7 @@ export default function TaskDetailPage() {
                   onClick={handleConfirmCompletion}
                   disabled={!completionNote.trim() || updating}
                  >
-                   {updating ? "Syncing..." : "Finalize"}
+                   {updating ? "Updating..." : "Complete"}
                  </Button>
               </div>
            </div>

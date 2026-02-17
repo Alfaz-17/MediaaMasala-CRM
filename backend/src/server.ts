@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import prisma from './lib/prisma';
 
@@ -22,6 +23,7 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 4000;
 
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 

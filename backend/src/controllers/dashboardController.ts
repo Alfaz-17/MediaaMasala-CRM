@@ -66,45 +66,48 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const leadsWhere = await getModuleWhere(user, 'leads', teamIds);
     const tasksWhere = await getModuleWhere(user, 'tasks', teamIds);
 
-    // 1. Leads Counts
-    const leadsCount = leadsWhere !== null 
-      ? await prisma.lead.count({ where: leadsWhere as any })
-      : 0;
-    
-    // 2. Tasks Stats
-    let tasksDueToday = 0;
-    let overdueTasks = 0;
-
-    if (tasksWhere !== null) {
-      tasksDueToday = await prisma.task.count({
-        where: {
-          ...tasksWhere,
-          dueDate: { gte: startOfToday, lte: endOfToday }
-        } as any
-      });
-
-      overdueTasks = await prisma.task.count({
-        where: {
-          ...tasksWhere,
-          dueDate: { lt: startOfToday },
-          status: { not: 'Completed' }
-        } as any
-      });
-    }
-
-    // 3. Personal Stats (Always visible if module is visible)
-    const myLeads = leadsWhere !== null 
-      ? await prisma.lead.count({ where: { ownerId: user.employeeId } })
-      : 0;
+    const [leadsCount, tasksDueToday, overdueTasks, myLeads, myTasksDueToday] = await Promise.all([
+      // 1. Leads Counts
+      leadsWhere !== null 
+        ? prisma.lead.count({ where: leadsWhere as any })
+        : Promise.resolve(0),
       
-    const myTasksDueToday = tasksWhere !== null
-      ? await prisma.task.count({
-          where: {
-            assigneeId: user.employeeId,
-            dueDate: { gte: startOfToday, lte: endOfToday }
-          }
-        })
-      : 0;
+      // 2. Tasks Due Today
+      tasksWhere !== null
+        ? prisma.task.count({
+            where: {
+              ...tasksWhere,
+              dueDate: { gte: startOfToday, lte: endOfToday }
+            } as any
+          })
+        : Promise.resolve(0),
+
+      // 3. Overdue Tasks
+      tasksWhere !== null
+        ? prisma.task.count({
+            where: {
+              ...tasksWhere,
+              dueDate: { lt: startOfToday },
+              status: { not: 'Completed' }
+            } as any
+          })
+        : Promise.resolve(0),
+
+      // 4. Personal Leads
+      leadsWhere !== null 
+        ? prisma.lead.count({ where: { ownerId: user.employeeId } })
+        : Promise.resolve(0),
+        
+      // 5. Personal Tasks Due Today
+      tasksWhere !== null
+        ? prisma.task.count({
+            where: {
+              assigneeId: user.employeeId,
+              dueDate: { gte: startOfToday, lte: endOfToday }
+            }
+          })
+        : Promise.resolve(0)
+    ]);
 
     res.json({
       global: {
@@ -136,36 +139,34 @@ export const getRecentActivity = async (req: Request, res: Response) => {
     const leadsWhere = await getModuleWhere(user, 'leads', teamIds);
     const tasksWhere = await getModuleWhere(user, 'tasks', teamIds);
 
-    let recentLeads: any[] = [];
-    let recentTasks: any[] = [];
-
-    if (leadsWhere !== null) {
-      recentLeads = await prisma.lead.findMany({
-        where: leadsWhere as any,
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          createdAt: true,
-          owner: { select: { firstName: true, email: true } }
-        }
-      });
-    }
-
-    if (tasksWhere !== null) {
-      recentTasks = await prisma.task.findMany({
-        where: tasksWhere as any,
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          title: true,
-          createdAt: true,
-          assignee: { select: { firstName: true, email: true } }
-        }
-      });
-    }
+    const [recentLeads, recentTasks] = await Promise.all([
+      leadsWhere !== null
+        ? prisma.lead.findMany({
+            where: leadsWhere as any,
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              name: true,
+              createdAt: true,
+              owner: { select: { firstName: true, email: true } }
+            }
+          })
+        : Promise.resolve([]),
+      tasksWhere !== null
+        ? prisma.task.findMany({
+            where: tasksWhere as any,
+            take: 5,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              title: true,
+              createdAt: true,
+              assignee: { select: { firstName: true, email: true } }
+            }
+          })
+        : Promise.resolve([])
+    ]);
 
     const activities = [
       ...recentLeads.map(l => ({

@@ -26,6 +26,7 @@ function NewTaskContent() {
   const initialProjectId = searchParams?.get("projectId")
   
   const [loading, setLoading] = useState(false)
+  const [loadingEmployees, setLoadingEmployees] = useState(true)
   const [error, setError] = useState("")
   
   const [leads, setLeads] = useState<any[]>([])
@@ -66,10 +67,13 @@ function NewTaskContent() {
         // Separate fetch for employees as it might require admin permissions
         // If it fails, we simply don't show the assignee dropdown (or show only self if we had that logic, but backing off to self-assign default is fine)
         try {
+           setLoadingEmployees(true)
            const employeesData = await apiClient.get("/admin/employees")
            setAssignees(employeesData.employees || employeesData || [])
         } catch (e) {
            console.log("Could not fetch employees (likely permission issue), defaulting to self-assign.")
+        } finally {
+           setLoadingEmployees(false)
         }
 
       } catch (err) {
@@ -114,27 +118,27 @@ function NewTaskContent() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-700">
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
-        <Link href="/dashboard/tasks" className="text-muted-foreground/40 text-primary hover:text-primary/100 transition-colors">Manifest</Link>
+        <Link href="/dashboard/tasks" className="text-muted-foreground/40 text-primary hover:text-primary/100 transition-colors">Tasks</Link>
         <span className="opacity-40">/</span>
-        <span className="text-foreground/80 tracking-tight">Generate Objective</span>
+        <span className="text-foreground/80 tracking-tight">Create Task</span>
       </div>
 
       <Card className="rounded-2xl border border-border/40 shadow-2xl overflow-hidden bg-card/50 backdrop-blur-sm">
         <CardHeader className="border-b border-border/10 pb-8 pt-10 px-10 bg-linear-to-b from-muted/20 to-transparent">
           <CardTitle className="text-2xl font-semibold tracking-tight">Create New Task</CardTitle>
-          <p className="text-[11px] font-medium text-muted-foreground/50 mt-1.5 leading-relaxed uppercase tracking-wider">Mission parameters for target execution</p>
+          <p className="text-[11px] font-medium text-muted-foreground/50 mt-1.5 leading-relaxed uppercase tracking-wider">Details for the new task</p>
         </CardHeader>
         
         <form onSubmit={handleSubmit}>
           <CardContent className="p-10 pt-8 space-y-8">
             {error && (
               <div className="bg-destructive/5 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wider animate-in shake">
-                🚨 Error Cascade: {error}
+                🚨 Error: {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Primary Objective *</Label>
+              <Label htmlFor="title" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Task Title *</Label>
               <Input 
                 id="title"
                 name="title" 
@@ -147,21 +151,21 @@ function NewTaskContent() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">In-depth Brief</Label>
+              <Label htmlFor="description" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Description</Label>
               <textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                placeholder="Technical details, requirements, or context..."
+                placeholder="More details about the task..."
                 className="flex w-full rounded-xl border border-border/20 bg-muted/10 px-5 py-4 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/20 resize-none transition-all shadow-inner leading-relaxed"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <Label htmlFor="priority" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Threat Level *</Label>
+                <Label htmlFor="priority" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Priority *</Label>
                 <div className="relative">
                   <select
                     id="priority"
@@ -179,7 +183,7 @@ function NewTaskContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dueDate" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Deadline *</Label>
+                <Label htmlFor="dueDate" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Due Date *</Label>
                 <Input 
                   id="dueDate"
                   name="dueDate" 
@@ -192,35 +196,42 @@ function NewTaskContent() {
               </div>
             </div>
 
-            {/* Assignee Field - Only show if we fetched employees */}
-            {assignees.length > 0 && (
-                <div className="space-y-2">
-                    <Label htmlFor="assigneeId" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Assigned Agent</Label>
-                    <div className="relative">
-                      <select
-                        id="assigneeId"
-                        name="assigneeId"
-                        value={formData.assigneeId}
-                        onChange={handleChange}
-                        className="flex h-12 w-full rounded-xl border border-border/20 bg-muted/10 px-5 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none cursor-pointer transition-all uppercase tracking-wider tabular-nums"
-                      >
-                        <option value="">Assign to Me (Default)</option>
+            {/* Assignee Field - Static with Loading state */}
+            <div className="space-y-2">
+                <Label htmlFor="assigneeId" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Assign User</Label>
+                <div className="relative">
+                  <select
+                    id="assigneeId"
+                    name="assigneeId"
+                    value={formData.assigneeId}
+                    onChange={handleChange}
+                    disabled={loadingEmployees}
+                    className="flex h-12 w-full rounded-xl border border-border/20 bg-muted/10 px-5 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none cursor-pointer transition-all uppercase tracking-wider tabular-nums disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingEmployees ? (
+                      <option value="">Loading users...</option>
+                    ) : (
+                      <>
+                        <option value="">Assign to Me ({session?.user?.name || session?.user?.email?.split('@')[0] || 'Default'})</option>
                         {assignees.map((emp) => (
-                           <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.department?.name || 'N/A'})</option>
+                           <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} — {emp.email?.split('@')[0]} ({emp.department?.name || 'N/A'})</option>
                         ))}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-20 text-[10px]">▼</div>
-                    </div>
+                      </>
+                    )}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-20 text-[10px]">
+                    {loadingEmployees ? <span className="animate-spin inline-block">◌</span> : "▼"}
+                  </div>
                 </div>
-            )}
+            </div>
 
             {/* Relation Selector */}
             <div className="space-y-4 pt-4">
-              <Label className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Relate Task To</Label>
+              <Label className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Link to</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                  {[
                    { id: "none", label: "None", icon: null },
-                   { id: "lead", label: "Sale", icon: ShoppingBag },
+                   { id: "lead", label: "Lead", icon: ShoppingBag },
                    { id: "project", label: "Project", icon: Briefcase },
                    { id: "product", label: "Product", icon: Package },
                  ].map((type) => (
@@ -250,7 +261,7 @@ function NewTaskContent() {
                         className="flex h-12 w-full rounded-xl border border-border/40 bg-muted/5 px-5 text-xs font-bold uppercase tracking-widest focus:outline-none appearance-none cursor-pointer"
                         required
                       >
-                        <option value="">Select Sale Target...</option>
+                        <option value="">Select Lead...</option>
                         {leads.map((lead) => (
                           <option key={lead.id} value={lead.id}>{lead.name} — {lead.company || lead.email}</option>
                         ))}
@@ -267,7 +278,7 @@ function NewTaskContent() {
                         className="flex h-12 w-full rounded-xl border border-border/40 bg-muted/5 px-5 text-xs font-bold uppercase tracking-widest focus:outline-none appearance-none cursor-pointer"
                         required
                       >
-                        <option value="">Select Operational Project...</option>
+                        <option value="">Select Project...</option>
                         {projects.map((p) => (
                           <option key={p.id} value={p.id}>{p.name} — {p.status}</option>
                         ))}
@@ -284,7 +295,7 @@ function NewTaskContent() {
                         className="flex h-12 w-full rounded-xl border border-border/40 bg-muted/5 px-5 text-xs font-bold uppercase tracking-widest focus:outline-none appearance-none cursor-pointer"
                         required
                       >
-                        <option value="">Select Catalog Product...</option>
+                        <option value="">Select Product...</option>
                         {products.map((p) => (
                           <option key={p.id} value={p.id}>{p.name} — {p.category}</option>
                         ))}
@@ -298,21 +309,21 @@ function NewTaskContent() {
 
           <CardFooter className="flex justify-end items-center gap-6 bg-muted/30 p-10 px-10 border-t border-border/10">
               <Link href="/dashboard/tasks" className="text-[10px] font-bold text-muted-foreground/50 hover:text-foreground transition-colors uppercase tracking-widest">
-                Abort Protocol
+                Cancel
               </Link>
               <Button 
                 type="submit" 
                 disabled={loading}
                 className="h-12 px-10 rounded-xl text-[11px] font-black shadow-2xl shadow-primary/20 uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
-                {loading ? "Initializing..." : "Commit Objective"}
+                {loading ? "Creating..." : "Create Task"}
               </Button>
           </CardFooter>
         </form>
       </Card>
       
       <div className="text-center">
-         <p className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-[0.2em] italic">Proprietary Operation Matrix v4.0</p>
+         <p className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-[0.2em] italic">Task Management System</p>
       </div>
     </div>
   )

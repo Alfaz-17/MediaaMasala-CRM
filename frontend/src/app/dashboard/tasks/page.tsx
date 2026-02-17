@@ -216,14 +216,14 @@ export default function TasksPage() {
         {/* Minimalist Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/40">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Mission Control</h1>
-            <p className="text-muted-foreground text-[13px] font-medium leading-relaxed">Coordinate and monitor active duties and project milestones.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tasks</h1>
+            <p className="text-muted-foreground text-[13px] font-medium leading-relaxed">Coordinate and monitor active tasks and project milestones.</p>
           </div>
           
           <div className="flex items-center gap-3">
              {canCreate && (
                <Button onClick={() => router.push("/dashboard/tasks/new")} className="rounded-lg h-9 font-semibold text-xs px-4 shadow-sm border border-primary/20">
-                 <Plus className="mr-2 h-3.5 w-3.5" /> Deploy Mission
+                <Plus className="mr-2 h-3.5 w-3.5" /> Create Task
                </Button>
              )}
           </div>
@@ -325,7 +325,7 @@ export default function TasksPage() {
                       <th className="px-6 py-4">Priority</th>
                       <th className="px-6 py-4">Status</th>
                       <th className="px-6 py-4">Deadline</th>
-                      <th className="px-6 py-4">Personnel</th>
+                      <th className="px-6 py-4">Assignee</th>
                       <th className="px-6 py-4 text-right">Reference</th>
                     </tr>
                   </thead>
@@ -475,9 +475,9 @@ export default function TasksPage() {
             <div className="h-12 w-12 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-6 border border-border/40">
                <CheckCircle2 className="h-5 w-5 text-muted-foreground/10" />
             </div>
-            <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Mission Cleared</h3>
+            <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/60">All Done</h3>
             <p className="text-muted-foreground/40 font-medium max-w-xs mx-auto mt-3 text-[11px] leading-relaxed uppercase tracking-widest">
-              {searchQuery ? "No matching records in the manifest." : "All duties have been fulfilled."}
+              {searchQuery ? "No matching records in the list." : "All tasks have been finished."}
             </p>
           </div>
         )}
@@ -486,7 +486,7 @@ export default function TasksPage() {
         {!isLoading && filteredTasks.length > 0 && (
           <div className="flex items-center justify-between py-6 border-t border-border/40 mt-8">
              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest opacity-50">
-              Total Tasks: <span className="text-foreground/70 font-bold tabular-nums">{filteredTasks.length} Items</span>
+              Task List: <span className="text-foreground/70 font-bold tabular-nums">{filteredTasks.length} Items</span>
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="h-9 px-3 font-semibold text-[9px] rounded-lg border-border/50" disabled>Previous</Button>

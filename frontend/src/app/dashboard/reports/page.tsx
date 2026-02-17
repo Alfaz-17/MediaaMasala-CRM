@@ -52,7 +52,7 @@ export default function ReportsPage() {
     <div className="space-y-8 animate-in fade-in duration-700 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/50 pb-6">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-foreground font-inter">Analytical Intelligence</h1>
+          <h1 className="text-3xl font-black tracking-tighter text-foreground font-inter">System Reports</h1>
           <p className="text-muted-foreground text-sm font-medium mt-1">
             Comprehensive system reports and performance metrics.
           </p>
@@ -150,7 +150,7 @@ export default function ReportsPage() {
 
           <Card className="border-border/40 bg-card/50">
             <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Team Productivity Matrix</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Team Work Progress</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -195,7 +195,7 @@ export default function ReportsPage() {
       {activeTab === 'attendance' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard title="Records Filtered" value={attendanceData?.summary.totalRecords} icon={Calendar} loading={isLoading} />
+            <StatCard title="Total Records" value={attendanceData?.summary.totalRecords} icon={Calendar} loading={isLoading} />
             <StatCard title="Attendance Rate" value={`${attendanceData?.summary.attendanceRate}%`} icon={TrendingUp} loading={isLoading} />
             <StatCard title="Late Check-ins" value={attendanceData?.summary.lateCount} icon={Clock} loading={isLoading} />
             <StatCard title="Absent Alerts" value={attendanceData?.summary.absentCount} icon={CheckSquare} loading={isLoading} />
@@ -227,7 +227,7 @@ export default function ReportsPage() {
 
             <Card className="border-border/40 bg-card/50">
                <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Quick Insights</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">

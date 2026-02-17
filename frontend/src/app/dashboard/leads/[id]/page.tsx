@@ -284,9 +284,9 @@ export default function LeadDetailPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/40">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2">
-            <Link href="/dashboard/leads" className="text-muted-foreground/60">All Sales</Link>
+            <Link href="/dashboard/leads" className="text-muted-foreground/60">All Leads</Link>
             <span className="opacity-30">/</span>
-            <span className="text-foreground/80">Sale Details</span>
+            <span className="text-foreground/80">Lead Details</span>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">{lead.name}</h1>
           <p className="text-muted-foreground text-xs font-medium mt-1">
@@ -340,7 +340,7 @@ export default function LeadDetailPage() {
                    </div>
                 </div>
                 <div className="pt-4 border-t border-border/30">
-                   <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-3">Sale Status</p>
+                   <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest mb-3">Lead Status</p>
                    {canEdit && (
                       <div className="relative">
                         <select 
@@ -363,7 +363,7 @@ export default function LeadDetailPage() {
               <div className="bg-destructive/5 border border-destructive/20 p-4 rounded-xl animate-in zoom-in duration-500">
                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-destructive text-xs">⚠️</span>
-                    <span className="text-[9px] font-bold text-destructive uppercase tracking-widest">Audit Failure Report</span>
+                    <span className="text-[9px] font-bold text-destructive uppercase tracking-widest">Lost Reason</span>
                  </div>
                  <p className="text-[11px] font-medium text-destructive leading-relaxed italic opacity-80">&quot;{lead.lostReason}&quot;</p>
               </div>
@@ -563,7 +563,7 @@ export default function LeadDetailPage() {
                       <div className="space-y-1.5">
                           <Label className="text-[9px] font-bold uppercase tracking-wider opacity-60 ml-0.5">What to do?</Label>
                           <textarea 
-                            placeholder="Primary mission objective..."
+                            placeholder="What needs to be done..."
                             className="w-full min-h-[100px] bg-white/10 border-none rounded-lg p-3 text-[11px] font-medium text-white focus:ring-1 focus:ring-white/30 outline-none placeholder:text-white/20 resize-none"
                             value={followUpAction}
                             onChange={(e) => setFollowUpAction(e.target.value)}
@@ -734,7 +734,7 @@ export default function LeadDetailPage() {
                  <div className="h-14 w-14 rounded-xl bg-primary/5 flex items-center justify-center mx-auto mb-4 border border-primary/10 shadow-xs">
                     <Rocket className="h-6 w-6 text-primary" />
                  </div>
-                 <h3 className="text-lg font-semibold tracking-tight text-foreground">Sale Won!</h3>
+                 <h3 className="text-lg font-semibold tracking-tight text-foreground">Lead Won!</h3>
                  <p className="text-muted-foreground font-medium text-xs mt-1.5 opacity-80">Start a new project for this win.</p>
               </div>
               <div className="space-y-4">
@@ -790,7 +790,7 @@ export default function LeadDetailPage() {
                       value={selectedAssignee || ""}
                       onChange={(e) => setSelectedAssignee(Number(e.target.value))}
                     >
-                      <option value="">Select worker...</option>
+                       <option value="">Select staff...</option>
                       {employees.map(emp => (
                         <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} — {emp.department?.name}</option>
                       ))}

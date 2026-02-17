@@ -168,7 +168,7 @@ export default function LeavesPage() {
             <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>
               <DialogTrigger asChild>
                 <Button className="shadow-lg shadow-primary/10 rounded-xl h-11 font-bold text-[11px] uppercase tracking-widest px-6">
-                  <Plus className="mr-2 h-4 w-4" /> Request Leave
+                  <Plus className="mr-2 h-4 w-4" /> Request Time Off
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px] bg-card border-border/40">

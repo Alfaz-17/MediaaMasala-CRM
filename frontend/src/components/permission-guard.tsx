@@ -25,7 +25,7 @@ export function PermissionGuard({
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8 animate-in fade-in duration-500">
         <Loader2 className="h-8 w-8 text-primary animate-spin opacity-20" />
         <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 animate-pulse">
-          Verifying Credentials
+          Checking access...
         </p>
       </div>
     )

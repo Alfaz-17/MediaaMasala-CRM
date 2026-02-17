@@ -181,7 +181,7 @@ export default function EodPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Operational Summary</Label>
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Work Summary</Label>
                   <textarea 
                     className="w-full h-48 rounded-xl bg-muted/20 border border-border/40 font-medium text-sm p-4 outline-none focus:ring-1 focus:ring-primary/40 leading-relaxed"
                     placeholder="Describe your achievements, challenges, and plan for tomorrow..."
@@ -219,7 +219,7 @@ export default function EodPage() {
                  <p className="text-muted-foreground font-medium text-sm">
                     {selectedEmployeeId !== "all" 
                         ? `No reports found for ${selectedEmployeeId}.` 
-                        : "No historical reports found in the archive."}
+                        : "No past reports found."}
                  </p>
                  {selectedEmployeeId === "all" && (
                     <Button variant="link" className="text-primary font-bold text-xs mt-2" onClick={() => setShowForm(true)}>Submit your first report →</Button>
