@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Briefcase,
   Package,
-  ShoppingBag
+  ShoppingBag,
+  ChevronRight
 } from "lucide-react"
 import { ViewToggle, ViewType } from "@/components/dashboard/view-toggle"
 import { 
@@ -82,7 +83,7 @@ function TasksSkeleton({ view }: { view: ViewType }) {
           <Skeleton className="h-9 w-32" />
         </div>
       </div>
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-xl border border-border/40 shadow-xs">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-lg border border-border/40 shadow-xs">
         <div className="flex gap-2">
           <Skeleton className="h-9 w-24" />
           <Skeleton className="h-9 w-24" />
@@ -92,7 +93,7 @@ function TasksSkeleton({ view }: { view: ViewType }) {
       </div>
 
       {view === "list" ? (
-        <div className="bg-card rounded-xl border border-border/40 shadow-xs overflow-hidden">
+        <div className="bg-card rounded-lg border border-border/40 shadow-xs overflow-hidden">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center justify-between p-4 border-b border-border/10">
               <div className="space-y-2">
@@ -108,7 +109,7 @@ function TasksSkeleton({ view }: { view: ViewType }) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="border-border/40 rounded-xl overflow-hidden">
+            <Card key={i} className="border-border/40 rounded-lg overflow-hidden">
               <CardHeader className="pb-3 border-b border-border/30 bg-muted/10">
                 <Skeleton className="h-5 w-40" />
                 <div className="flex gap-2 mt-2">
@@ -140,7 +141,7 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<'my' | 'all'>('all')
   const [view, setView] = useState<ViewType>("list")
-  const { hasPermission } = usePermissions()
+  const { hasPermission, isLoading: permissionsLoading } = usePermissions()
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
@@ -201,7 +202,7 @@ export default function TasksPage() {
     )
   }, [tasks, searchQuery, selectedStatus, selectedPriority])
 
-  if (status === "loading" || isLoading) return (
+  if (status === "loading" || isLoading || permissionsLoading) return (
     <PermissionGuard module="tasks" action="view">
       <div className="max-w-7xl mx-auto">
         <TasksSkeleton view={view} />
@@ -211,40 +212,36 @@ export default function TasksPage() {
 
   return (
     <PermissionGuard module="tasks" action="view">
-      <div className="space-y-6 animate-in fade-in duration-700 max-w-7xl mx-auto">
-        {/* Header section - Modern SaaS */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/40 pb-6">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tasks</h1>
-            <p className="text-muted-foreground text-xs font-medium mt-1">Manage and track your tasks.</p>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-7xl mx-auto">
+        {/* Minimalist Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/40">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Mission Control</h1>
+            <p className="text-muted-foreground text-[13px] font-medium leading-relaxed">Coordinate and monitor active duties and project milestones.</p>
           </div>
           
           <div className="flex items-center gap-3">
-             <div className="flex flex-col items-end px-4 border-r border-border/50">
-               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none">Status</span>
-               <span className="text-xs font-semibold text-foreground mt-1 tabular-nums">{filteredTasks.length} Tasks</span>
-             </div>
              {canCreate && (
-               <Button onClick={() => router.push("/dashboard/tasks/new")} className="shadow-lg shadow-primary/10 rounded-lg h-9 font-semibold text-xs px-4">
-                 <Plus className="mr-2 h-3.5 w-3.5" /> Add Task
+               <Button onClick={() => router.push("/dashboard/tasks/new")} className="rounded-lg h-9 font-semibold text-xs px-4 shadow-sm border border-primary/20">
+                 <Plus className="mr-2 h-3.5 w-3.5" /> Deploy Mission
                </Button>
              )}
           </div>
         </div>
 
-        {/* Controller Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-xl border border-border/40 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex bg-muted/30 p-1 rounded-lg border border-border/20">
+        {/* Minimalist Controller Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 flex-1 w-full">
+            <div className="flex bg-muted/40 p-1 rounded-lg border border-border/40 h-9">
                 <button 
                 onClick={() => setActiveTab('all')}
-                className={`px-4 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all ${activeTab === 'all' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground/60'}`}
+                className={`px-4 h-full rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'all' ? 'bg-background text-foreground shadow-sm ring-1 ring-border/5' : 'text-muted-foreground/60 hover:text-foreground'}`}
                 >
                 Global
                 </button>
                 <button 
                 onClick={() => setActiveTab('my')}
-                className={`px-4 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all ${activeTab === 'my' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground/60'}`}
+                className={`px-4 h-full rounded-md text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'my' ? 'bg-background text-foreground shadow-sm ring-1 ring-border/5' : 'text-muted-foreground/60 hover:text-foreground'}`}
                 >
                 My Stack
                 </button>
@@ -260,51 +257,51 @@ export default function TasksPage() {
             />
 
             {/* Status Filter */}
-            <div className="relative min-w-[110px]">
+            <div className="relative min-w-[130px]">
                 <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-border/40 bg-card px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
+                    className="flex h-9 w-full rounded-lg border border-border/40 bg-background pl-3 pr-8 text-[11px] font-bold uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm hover:border-primary/30 transition-all font-sans"
                 >
-                    <option value="all">All Status</option>
+                    <option value="all">Any Status</option>
                     <option value="Pending">Pending</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Completed">Completed</option>
                     <option value="Cancelled">Cancelled</option>
                 </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[8px]">▼</div>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 text-[9px]">▼</div>
             </div>
 
             {/* Priority Filter */}
-            <div className="relative min-w-[110px]">
+            <div className="relative min-w-[130px]">
                 <select
                     value={selectedPriority}
                     onChange={(e) => setSelectedPriority(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-border/40 bg-card px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
+                    className="flex h-9 w-full rounded-lg border border-border/40 bg-background pl-3 pr-8 text-[11px] font-bold uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm hover:border-primary/30 transition-all font-sans"
                 >
-                    <option value="all">All Priority</option>
+                    <option value="all">Any Priority</option>
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
                     <option value="Low">Low</option>
                 </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[8px]">▼</div>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 text-[9px]">▼</div>
+            </div>
+
+            <div className="relative flex-1 group min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 h-3.5 w-3.5 group-focus-within:text-primary transition-colors" />
+                <Input 
+                  placeholder="Filter tasks..." 
+                  className="pl-9 h-9 bg-background border border-border/40 focus:ring-primary/40 rounded-lg text-xs font-medium placeholder:text-muted-foreground/50"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
             </div>
           </div>
-
-          <div className="relative flex-1 group max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/30 h-3.5 w-3.5 group-focus-within:text-primary transition-colors" />
-            <Input 
-              placeholder="Search tasks..." 
-              className="pl-10 h-9 bg-transparent border-none focus-visible:ring-0 text-xs font-medium"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
           
-          <div className="flex items-center gap-2 px-2">
+          <div className="flex items-center gap-2">
             <ViewToggle view={view} onViewChange={setView} />
-            <div className="h-4 w-[1px] bg-border/40 mx-2" />
-            <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-semibold text-muted-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setSelectedStatus("all"); setSelectedPriority("all")}}>
+            <div className="h-4 w-px bg-border/40 mx-1" />
+            <Button variant="ghost" size="sm" className="h-9 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setSelectedStatus("all"); setSelectedPriority("all")}}>
               Reset
             </Button>
           </div>
@@ -319,99 +316,78 @@ export default function TasksPage() {
         {/* Main Content Area */}
         {filteredTasks.length > 0 ? (
           view === "list" ? (
-            <div className="bg-card rounded-xl border border-border/40 shadow-xs overflow-hidden">
+            <div className="bg-background rounded-lg border border-border/40 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-muted/30 border-b border-border/30 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                      <th className="px-6 py-3">Task</th>
-                      <th className="px-6 py-3">Priority</th>
-                      <th className="px-6 py-3">Status</th>
-                      <th className="px-6 py-3">Due Date</th>
-                      <th className="px-6 py-3">Assigned To</th>
-                      <th className="px-6 py-3 text-right">Actions</th>
+                    <tr className="bg-muted/30 border-b border-border/40 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+                      <th className="px-6 py-4">Context</th>
+                      <th className="px-6 py-4">Priority</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Deadline</th>
+                      <th className="px-6 py-4">Personnel</th>
+                      <th className="px-6 py-4 text-right">Reference</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/20">
+                  <tbody className="divide-y divide-border/10">
                     {filteredTasks.map((task) => {
                       const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'Completed'
                       return (
-                        <tr key={task.id} className="group border-b border-border/10">
+                        <tr key={task.id} className="group hover:bg-muted/10 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-sm text-foreground tracking-tight underline-offset-4 decoration-primary/30 cursor-pointer" onClick={() => router.push(`/dashboard/tasks/${task.id}`)}>
+                              <span className="font-semibold text-[13px] text-foreground tracking-tight hover:text-primary cursor-pointer transition-colors" onClick={() => router.push(`/dashboard/tasks/${task.id}`)}>
                                 {task.title}
                               </span>
                               <div className="flex items-center gap-2 mt-1">
                                 {task.lead && (
                                   <div className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors" onClick={() => router.push(`/dashboard/leads/${task.lead?.id}`)}>
-                                    <div className="h-1 w-1 rounded-full bg-primary/60" />
-                                    <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{task.lead.name}</span>
+                                    <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">{task.lead.name}</span>
                                   </div>
                                 )}
                                 {task.project && (
                                   <div className="flex items-center gap-1 cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => router.push(`/dashboard/portfolio?tab=projects`)}>
-                                    <div className="h-1 w-1 rounded-full bg-indigo-500/60" />
-                                    <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{task.project.name}</span>
-                                  </div>
-                                )}
-                                {task.product && (
-                                  <div className="flex items-center gap-1 cursor-pointer hover:text-amber-500 transition-colors" onClick={() => router.push(`/dashboard/portfolio?tab=products`)}>
-                                    <div className="h-1 w-1 rounded-full bg-amber-500/60" />
-                                    <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">{task.product.name}</span>
+                                    <div className="h-1.5 w-1.5 rounded-full bg-border" />
+                                    <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">{task.project.name}</span>
                                   </div>
                                 )}
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <Badge variant={getPriorityVariant(task.priority)} className="font-semibold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md border-none shadow-sm">
+                            <Badge variant={getPriorityVariant(task.priority)} className="font-bold text-[9px] uppercase tracking-[0.15em] py-0.5 px-3 rounded-full border-none shadow-none">
                               {task.priority}
                             </Badge>
                           </td>
                           <td className="px-6 py-4">
-                            <Badge variant={getStatusVariant(task.status)} className="font-semibold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md border-none shadow-sm">
+                            <Badge variant={getStatusVariant(task.status)} className="font-bold text-[9px] uppercase tracking-[0.15em] py-0.5 px-3 rounded-full border-none shadow-none">
                               {task.status}
                             </Badge>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className={`text-[11px] font-semibold tabular-nums ${isOverdue ? "text-destructive" : "text-foreground/80"}`}>
-                                {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                              </span>
-                            </div>
+                            <span className={`text-[11px] font-bold tabular-nums tracking-tight ${isOverdue ? "text-destructive" : "text-muted-foreground/80"}`}>
+                              {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                            </span>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2.5">
-                               <div className="w-7 h-7 rounded-md bg-muted border border-border/40 flex items-center justify-center text-[10px] font-bold text-foreground/70 shadow-xs">
+                               <div className="w-6 h-6 rounded bg-muted border border-border/40 flex items-center justify-center text-[9px] font-bold text-foreground/50">
                                  {task.assignee ? task.assignee.firstName.charAt(0) : "!"}
                                </div>
-                               <span className="text-[10px] font-medium text-muted-foreground/60 uppercase">
-                                 {task.assignee ? `${task.assignee.firstName}` : "Unassigned"}
+                               <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                 {task.assignee ? task.assignee.firstName : "Unassigned"}
                                </span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-1.5 opacity-60">
-                              <Button 
-                                variant="secondary" 
+                             <Button 
+                                variant="ghost" 
                                 size="sm" 
-                                className="h-7 text-[10px] font-semibold px-3 rounded-md border border-border/40"
+                                className="h-8 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
                                 onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
                               >
-                                View
+                                Access
                               </Button>
-                              {canDelete && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-7 text-[10px] font-semibold px-3 text-destructive hover:bg-destructive/10 rounded-md"
-                                  onClick={() => handleDelete(task.id, task.title)}
-                                >
-                                  Delete
-                                </Button>
-                              )}
-                            </div>
                           </td>
                         </tr>
                       )
@@ -425,78 +401,64 @@ export default function TasksPage() {
               {filteredTasks.map((task) => {
                 const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'Completed'
                 return (
-                  <Card key={task.id} className="shadow-xs bg-linear-to-t from-primary/5 to-card group border-border/40 rounded-xl overflow-hidden">
-                    <CardHeader className="pb-3 border-b border-border/30 bg-muted/10 relative">
-                      <div className="flex items-start justify-between relative z-10">
-                        <div className="space-y-1.5">
-                          <CardTitle className="text-base font-semibold tracking-tight leading-none">{task.title}</CardTitle>
-                          <div className="flex gap-2">
-                            <Badge variant={getPriorityVariant(task.priority)} className="text-[8px] font-semibold uppercase tracking-wider rounded-md border-none shadow-sm">
+                  <Card key={task.id} className="shadow-sm bg-background group border-border/40 rounded-lg overflow-hidden hover:border-primary/20 transition-all duration-300">
+                    <CardHeader className="pb-4 pt-5 px-5 border-b border-border/10">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <CardTitle className="text-sm font-semibold tracking-tight text-foreground line-clamp-1">{task.title}</CardTitle>
+                          <div className="flex gap-1.5">
+                            <Badge variant={getPriorityVariant(task.priority)} className="text-[8px] font-bold uppercase tracking-widest px-2 py-0 rounded-full border-none">
                               {task.priority}
                             </Badge>
-                            <Badge variant={getStatusVariant(task.status)} className="text-[8px] font-semibold uppercase tracking-wider rounded-md border-none shadow-sm">
+                            <Badge variant={getStatusVariant(task.status)} className="text-[8px] font-bold uppercase tracking-widest px-2 py-0 rounded-full border-none">
                               {task.status}
                             </Badge>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/30 shadow-sm rounded-md">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/20 hover:text-foreground" onClick={() => router.push(`/dashboard/tasks/${task.id}`)}>
+                          <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-5 space-y-4">
+                    <CardContent className="pt-5 space-y-5 px-5">
                       {task.description && (
-                        <p className="text-xs font-medium text-muted-foreground line-clamp-2 leading-relaxed opacity-80">
+                        <p className="text-[11px] font-medium text-muted-foreground/70 line-clamp-2 leading-relaxed">
                           {task.description}
                         </p>
                       )}
-                      <div className="space-y-2">
-                        <div className={`flex items-center gap-2.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border/30 ${isOverdue ? "bg-destructive/5 text-destructive border-destructive/20" : "bg-muted/30 text-muted-foreground"}`}>
-                          <Clock className={`h-3 w-3 ${isOverdue ? "animate-pulse" : "opacity-30"}`} />
-                          <span className="text-[9px] font-bold uppercase tracking-wider tabular-nums">
-                            Due Date: {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                          </span>
+                      <div className="space-y-3">
+                        <div className={`flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-widest tabular-nums ${isOverdue ? "text-destructive" : "text-muted-foreground/60"}`}>
+                          <Clock className="h-3 w-3 opacity-40" />
+                          <span>Deadline // {new Date(task.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()}</span>
                         </div>
-                        <div className="flex flex-col gap-1.5">
+                        
+                        <div className="flex flex-wrap gap-1.5">
                           {task.lead && (
-                            <div className="flex items-center gap-2.5 text-xs font-semibold text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10 cursor-pointer hover:bg-primary/10 transition-all" onClick={() => router.push(`/dashboard/leads/${task.lead?.id}`)}>
-                              <ShoppingBag className="h-3 w-3 opacity-40" />
-                              <span className="text-[9px] font-bold uppercase tracking-wider truncate">
-                                {task.lead.name}
-                              </span>
+                            <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-primary bg-primary/5 px-2.5 py-1 rounded border border-primary/10">
+                              {task.lead.name}
                             </div>
                           )}
                           {task.project && (
-                            <div className="flex items-center gap-2.5 text-xs font-semibold text-indigo-500 bg-indigo-500/5 px-3 py-1.5 rounded-lg border border-indigo-500/10 cursor-pointer hover:bg-indigo-500/10 transition-all" onClick={() => router.push(`/dashboard/portfolio?tab=projects`)}>
-                              <Briefcase className="h-3 w-3 opacity-40" />
-                              <span className="text-[9px] font-bold uppercase tracking-wider truncate">
-                                {task.project.name}
-                              </span>
-                            </div>
-                          )}
-                          {task.product && (
-                            <div className="flex items-center gap-2.5 text-xs font-semibold text-amber-500 bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-500/10 cursor-pointer hover:bg-amber-500/10 transition-all" onClick={() => router.push(`/dashboard/portfolio?tab=products`)}>
-                              <Package className="h-3 w-3 opacity-40" />
-                              <span className="text-[9px] font-bold uppercase tracking-wider truncate">
-                                {task.product.name}
-                              </span>
+                            <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground bg-muted/20 px-2.5 py-1 rounded border border-border/40">
+                              {task.project.name}
                             </div>
                           )}
                         </div>
                       </div>
-                      <div className="pt-3 border-t border-border/30 flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-xs font-medium text-muted-foreground">
-                          <div className="h-6 w-6 rounded-md bg-muted border border-border/30 flex items-center justify-center text-[9px] font-bold shadow-xs">
+                      
+                      <div className="pt-4 border-t border-border/10 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-6 w-6 rounded bg-muted border border-border/40 flex items-center justify-center text-[9px] font-bold text-foreground/40 shadow-none">
                             {task.assignee ? task.assignee.firstName.charAt(0) : "!"}
                           </div>
-                          <span className="text-[9px] font-bold uppercase text-foreground/50">
-                            {task.assignee ? `${task.assignee.firstName}` : "Unassigned"}
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                            {task.assignee ? task.assignee.firstName : "Unassigned"}
                           </span>
                         </div>
                         <Button 
-                          variant="link" 
+                          variant="ghost" 
                           size="sm" 
-                          className="px-0 h-auto text-primary font-semibold text-[10px] hover:no-underline"
+                          className="h-8 px-0 text-primary font-bold text-[10px] uppercase tracking-widest hover:bg-transparent"
                           onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
                         >
                           Details →
@@ -509,22 +471,14 @@ export default function TasksPage() {
             </div>
           )
         ) : (
-          <div className="bg-card rounded-xl border border-border/40 border-dashed py-24 text-center shadow-inner mt-4">
-            <div className="h-14 w-14 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-6">
-               <CheckCircle2 className="h-6 w-6 text-muted-foreground/20" />
+          <div className="bg-background rounded-lg border border-border/40 border-dashed py-24 text-center mt-4">
+            <div className="h-12 w-12 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-6 border border-border/40">
+               <CheckCircle2 className="h-5 w-5 text-muted-foreground/10" />
             </div>
-            <h3 className="text-lg font-semibold tracking-tight text-foreground">No tasks found</h3>
-            <p className="text-muted-foreground font-medium max-w-xs mx-auto mt-2 text-xs leading-relaxed">
-              {searchQuery ? "No tasks match your search query." : "You've completed all your tasks!"}
+            <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Mission Cleared</h3>
+            <p className="text-muted-foreground/40 font-medium max-w-xs mx-auto mt-3 text-[11px] leading-relaxed uppercase tracking-widest">
+              {searchQuery ? "No matching records in the manifest." : "All duties have been fulfilled."}
             </p>
-            {!searchQuery && canCreate && (
-              <Button 
-                onClick={() => router.push("/dashboard/tasks/new")} 
-                className="mt-6 shadow-lg shadow-primary/10 h-10 px-6 font-semibold text-xs rounded-lg"
-              >
-                <Plus className="mr-2 h-3.5 w-3.5" /> Add Task
-              </Button>
-            )}
           </div>
         )}
 

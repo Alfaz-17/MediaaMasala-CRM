@@ -267,10 +267,11 @@ function PortfolioContent() {
                 <div className="flex justify-end">
                     <Dialog open={isProductModalOpen} onOpenChange={(open) => { setIsProductModalOpen(open); if(!open) setEditingItem(null); }}>
                         <DialogTrigger asChild>
-                            <Button className="shadow-lg shadow-primary/10 rounded-xl h-10 font-bold text-[11px] uppercase tracking-widest px-6">
+                            <Button className="shadow-lg shadow-primary/10 rounded-xl h-10 font-bold text-[11px] uppercase tracking-widest px-6" disabled={loading}>
                                 <Plus className="mr-2 h-4 w-4" /> New Software
                             </Button>
                         </DialogTrigger>
+                        {/* ... DialogContent stays same ... */}
                         <DialogContent>
                             <form onSubmit={handleProductSubmit}>
                                 <DialogHeader>
@@ -307,8 +308,23 @@ function PortfolioContent() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredProducts.map(product => (
+                    {loading ? (
+                        Array.from({ length: 8 }).map((_, i) => (
+                            <Card key={i} className="border-border/40 shadow-none">
+                                <CardHeader className="pb-3">
+                                    <Skeleton className="h-10 w-10 rounded-lg mb-4" />
+                                    <Skeleton className="h-5 w-3/4 mb-2" />
+                                    <Skeleton className="h-3 w-full" />
+                                </CardHeader>
+                                <CardContent>
+                                    <Skeleton className="h-4 w-1/2 mb-4" />
+                                    <Skeleton className="h-8 w-full rounded-md" />
+                                </CardContent>
+                            </Card>
+                        ))
+                    ) : filteredProducts.map(product => (
                         <Card key={product.id} className="group hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col">
+                            {/* ... Product Card Content ... */}
                             <CardHeader className="pb-3">
                                 <div className="flex justify-between items-start">
                                     <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
@@ -363,10 +379,11 @@ function PortfolioContent() {
                  <div className="flex justify-end">
                     <Dialog open={isProjectModalOpen} onOpenChange={(open) => { setIsProjectModalOpen(open); if(!open) setEditingItem(null); }}>
                         <DialogTrigger asChild>
-                            <Button className="shadow-lg shadow-primary/10 rounded-xl h-10 font-bold text-[11px] uppercase tracking-widest px-6" variant="default">
+                            <Button className="shadow-lg shadow-primary/10 rounded-xl h-10 font-bold text-[11px] uppercase tracking-widest px-6" variant="default" disabled={loading}>
                                 <Plus className="mr-2 h-4 w-4" /> New Project
                             </Button>
                         </DialogTrigger>
+                        {/* ... DialogContent ... */}
                         <DialogContent>
                             <form onSubmit={handleProjectSubmit}>
                                 <DialogHeader>
@@ -403,8 +420,23 @@ function PortfolioContent() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredProjects.map(project => (
+                    {loading ? (
+                        Array.from({ length: 6 }).map((_, i) => (
+                            <Card key={i} className="border-border/40 shadow-none">
+                                <CardHeader className="pb-3">
+                                    <Skeleton className="h-10 w-10 rounded-lg mb-4" />
+                                    <Skeleton className="h-5 w-3/4 mb-2" />
+                                    <Skeleton className="h-3 w-1/4" />
+                                </CardHeader>
+                                <CardContent>
+                                    <Skeleton className="h-4 w-full mb-4" />
+                                    <Skeleton className="h-8 w-full rounded-md" />
+                                </CardContent>
+                            </Card>
+                        ))
+                    ) : filteredProjects.map(project => (
                         <Card key={project.id} className="group hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-md flex flex-col">
+                            {/* ... Project Card Content ... */}
                             <CardHeader className="pb-3">
                                  <div className="flex justify-between items-start">
                                     <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">

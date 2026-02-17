@@ -30,29 +30,26 @@ interface LayoutShellProps {
 
 function SidebarContent({ pathname, filteredNav, canSeeSettings, isAdmin, handleLogout, user, role }: any) {
   return (
-    <div className="flex flex-col h-full bg-[#FFFFFF] dark:bg-[#020617] relative">
-      {/* Mobile Close Button (Top Right) */}
-      {/* Mobile Close Button (Top Right) - REMOVED (SheetContent has built-in close) */}
-
+    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border relative">
       {/* Sidebar Header / Branding */}
-      <div className="h-20 flex items-center px-6 border-b border-border/40 bg-[#FFFFFF] dark:bg-[#020617]">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 text-white h-10 w-10 rounded-xl flex items-center justify-center font-black shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
+      <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
+        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+          <div className="bg-primary text-primary-foreground h-8 w-8 rounded-lg flex items-center justify-center font-bold shadow-sm group-hover:scale-105 transition-transform duration-300">
             M
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-lg tracking-tight leading-none text-slate-900 dark:text-white">Media Masala</span>
-            <span className="text-[10px] text-indigo-500/80 font-bold uppercase tracking-[0.2em] mt-1">Enterprise CRM</span>
+            <span className="font-semibold text-sm tracking-tight leading-none">Media Masala</span>
+            <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Enterprise CRM</span>
           </div>
         </Link>
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 px-4 py-8 space-y-10 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 px-3 py-6 space-y-8 overflow-y-auto custom-scrollbar font-sans">
         {/* Main Section */}
-        <div className="space-y-1.5">
-          <div className="px-3 mb-4">
-             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">Main Navigation</p>
+        <div className="space-y-1">
+          <div className="px-2 mb-2">
+             <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Navigation</p>
           </div>
           {filteredNav.map((item: any) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
@@ -61,14 +58,17 @@ function SidebarContent({ pathname, filteredNav, canSeeSettings, isAdmin, handle
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 relative group ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative group ${
                   isActive
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                    : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-border/10"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 }`}
               >
-                <Icon className={`h-[20px] w-[20px] transition-colors duration-300 ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`} />
+                <Icon className={`h-[18px] w-[18px] transition-colors duration-200 ${isActive ? "text-primary" : "text-muted-foreground/60 group-hover:text-sidebar-accent-foreground"}`} />
                 <span>{item.label}</span>
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-primary rounded-r-full" />
+                )}
               </Link>
             )
           })}
@@ -76,19 +76,19 @@ function SidebarContent({ pathname, filteredNav, canSeeSettings, isAdmin, handle
 
         {/* Admin Section */}
         {canSeeSettings && (
-          <div className="space-y-1.5 pt-4 border-t border-border/30">
-            <div className="px-3 mb-4">
-               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">{isAdmin ? "System Admin" : "Management"}</p>
+          <div className="space-y-1 pt-4 border-t border-sidebar-border/50">
+            <div className="px-2 mb-2">
+               <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">{isAdmin ? "Admin" : "Management"}</p>
             </div>
             <Link
               href="/dashboard/settings"
-              className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 group ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 pathname.startsWith("/dashboard/settings")
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                  : "text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-border/10"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
-              <Settings className={`h-[20px] w-[20px] ${pathname.startsWith("/dashboard/settings") ? "text-white" : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300"}`} />
+              <Settings className={`h-[18px] w-[18px] ${pathname.startsWith("/dashboard/settings") ? "text-primary" : "text-muted-foreground/60 group-hover:text-sidebar-accent-foreground"}`} />
               <span>Settings</span>
             </Link>
           </div>
@@ -96,18 +96,18 @@ function SidebarContent({ pathname, filteredNav, canSeeSettings, isAdmin, handle
       </div>
 
       {/* User Info & Logout Footer */}
-      <div className="p-4 bg-white dark:bg-slate-950 border-t border-border/40">
-         <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 mb-3 border border-border/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600/10 flex items-center justify-center text-indigo-600 font-black text-xs border border-indigo-600/20">
+      <div className="p-3 bg-sidebar border-t border-sidebar-border">
+         <div className="bg-sidebar-accent/50 rounded-lg p-2.5 mb-2 border border-sidebar-border/40">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px] border border-primary/20">
                 {user?.email?.[0].toUpperCase() || "U"}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">
+                <span className="text-xs font-semibold text-foreground truncate leading-tight">
                   {user?.email?.split('@')[0]}
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                  {role || "Team Member"}
+                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">
+                  {role || "Member"}
                 </span>
               </div>
             </div>
@@ -115,13 +115,13 @@ function SidebarContent({ pathname, filteredNav, canSeeSettings, isAdmin, handle
          
          <button 
            onClick={handleLogout}
-           className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-300 group"
+           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/5 dark:hover:bg-destructive/10 transition-all duration-200 group"
          >
-           <div className="flex items-center gap-3">
-             <LogOut className="h-[18px] w-[18px] transition-transform group-hover:-translate-x-0.5" />
+           <div className="flex items-center gap-2.5">
+             <LogOut className="h-[16px] w-[16px] transition-transform group-hover:-translate-x-0.5" />
              <span>Sign Out</span>
            </div>
-           <ChevronRight className="h-4 w-4 opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+           <ChevronRight className="h-3 w-3 opacity-30 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
          </button>
       </div>
     </div>
@@ -182,19 +182,18 @@ export function LayoutShell({ children }: LayoutShellProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <header className="h-14 border-b border-border/50 bg-[#FFFFFF] dark:bg-[#020617] sticky top-0 z-20 flex items-center justify-between px-4 lg:px-6">
+        <header className="h-14 border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between px-4 lg:px-6">
            <div className="flex items-center gap-3">
              <Sheet>
                <SheetTrigger asChild>
-                 <div className="relative group lg:hidden">
-                   <div className="absolute -inset-1.5 bg-indigo-500/10 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                   <Button variant="ghost" size="icon" className="relative h-11 w-11 border-2 border-indigo-600/10 bg-white dark:bg-slate-950 shadow-md hover:bg-slate-50 dark:hover:bg-slate-900 transition-all active:scale-90 rounded-xl flex items-center justify-center">
-                     <Menu className="h-6 w-6 text-indigo-600" strokeWidth={2.5} />
+                 <div className="lg:hidden">
+                   <Button variant="ghost" size="icon" className="h-9 w-9 border border-border bg-background shadow-sm hover:bg-muted active:scale-95 rounded-lg flex items-center justify-center">
+                     <Menu className="h-5 w-5 text-foreground" />
                      <span className="sr-only">Toggle Menu</span>
                    </Button>
                  </div>
                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[260px] border-0 shadow-2xl bg-[#FFFFFF] dark:bg-[#020617] ring-0 outline-none">
+                <SheetContent side="left" className="p-0 w-[260px] border-r border-border bg-sidebar ring-0 outline-none">
                   <SidebarContent 
                     pathname={pathname} 
                     filteredNav={filteredNav} 
@@ -207,39 +206,36 @@ export function LayoutShell({ children }: LayoutShellProps) {
                 </SheetContent>
              </Sheet>
 
-             <div className="lg:hidden flex items-center gap-3 ml-2 mr-2">
-               <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 text-white h-9 w-9 rounded-xl flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-500/20 shadow-indigo-500 border border-white/20">
+             <div className="lg:hidden flex items-center gap-2 ml-1">
+               <div className="bg-primary text-primary-foreground h-7 w-7 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm">
                  M
                </div>
-               <div className="flex flex-col">
-                 <span className="font-bold text-[14px] tracking-tight text-slate-900 dark:text-white leading-none">Media Masala</span>
-                 <span className="text-[9px] text-indigo-500/80 font-bold uppercase tracking-wider mt-1 hidden xs:block">Enterprise CRM</span>
-               </div>
+               <span className="font-semibold text-sm tracking-tight text-foreground">Media Masala</span>
              </div>
 
-             <div className="hidden sm:flex items-center gap-2">
-               <div className="text-muted-foreground/40 font-medium text-[10px] uppercase tracking-widest px-1">App</div>
+             <div className="hidden sm:flex items-center gap-2 ml-2">
+               <div className="text-muted-foreground/50 font-medium text-[10px] uppercase tracking-wider">App</div>
                <ChevronRight className="h-3 w-3 text-muted-foreground/30" />
-               <span className="text-foreground font-semibold text-xs capitalize tracking-tight">
+               <span className="text-foreground font-medium text-[13px] capitalize tracking-tight">
                  {pathname.split('/').pop()?.replace('-', ' ') || 'Dashboard'}
                </span>
              </div>
            </div>
 
            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-border/40 bg-muted/30 shadow-xs cursor-pointer hover:bg-muted/50 transition-colors">
-                <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center text-primary font-bold text-[9px]">
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border/50 bg-muted/40 shadow-sm cursor-pointer hover:bg-muted/60 transition-colors">
+                <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center text-primary font-bold text-[9px] border border-primary/20">
                   {user?.email?.[0].toUpperCase() || "U"}
                 </div>
                 <div className="flex flex-col max-w-[100px]">
-                  <span className="text-[10px] font-semibold leading-tight truncate">{user?.email?.split('@')[0]}</span>
-                  <span className="text-[8px] text-muted-foreground/60 font-medium uppercase tracking-tighter">{role || user?.role}</span>
+                  <span className="text-[10px] font-semibold leading-tight truncate text-foreground">{user?.email?.split('@')[0]}</span>
+                  <span className="text-[8px] text-muted-foreground/70 font-bold uppercase tracking-tighter">{role || user?.role}</span>
                 </div>
               </div>
            </div>
         </header>
 
-        <main className="p-4 lg:p-6 max-w-7xl w-full mx-auto animate-in fade-in duration-500">
+        <main className="p-4 lg:p-8 max-w-7xl w-full mx-auto animate-in fade-in slide-in-from-bottom-2 duration-700">
           {children}
         </main>
       </div>

@@ -73,12 +73,12 @@ function LeadsSkeleton({ view }: { view: ViewType }) {
           <Skeleton className="h-9 w-32" />
         </div>
       </div>
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-xl border border-border/40">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-lg border border-border/40">
         <Skeleton className="h-10 w-full md:w-64" />
         <Skeleton className="h-10 w-32" />
       </div>
       {view === "list" ? (
-        <div className="border border-border/40 rounded-xl overflow-hidden">
+        <div className="border border-border/40 rounded-lg overflow-hidden">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center justify-between p-4 border-b border-border/10">
               <div className="space-y-2">
@@ -121,7 +121,7 @@ export default function LeadsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [view, setView] = useState<ViewType>("list")
-  const { hasPermission } = usePermissions()
+  const { hasPermission, isLoading: permissionsLoading } = usePermissions()
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
@@ -174,7 +174,7 @@ export default function LeadsPage() {
     )
   }, [leads, searchQuery, selectedStatus])
 
-  if (status === "loading" || isLoading) {
+  if (status === "loading" || isLoading || permissionsLoading) {
     return (
       <PermissionGuard module="leads" action="view">
         <div className="max-w-7xl mx-auto">
@@ -186,36 +186,32 @@ export default function LeadsPage() {
 
   return (
     <PermissionGuard module="leads" action="view">
-      <div className="space-y-6 animate-in fade-in duration-700 max-w-7xl mx-auto">
-        {/* Header section - Modern SaaS */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/40 pb-6">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">All Sales</h1>
-            <p className="text-muted-foreground text-xs font-medium mt-1">Keep track of your sales here.</p>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-7xl mx-auto">
+        {/* Minimalist Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/40">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Leads Management</h1>
+            <p className="text-muted-foreground text-[13px] font-medium leading-relaxed">View and track all sales opportunities across the company.</p>
           </div>
           
           <div className="flex items-center gap-3">
-             <div className="flex flex-col items-end px-4 border-r border-border/50">
-               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none">Total</span>
-               <span className="text-xs font-semibold text-foreground mt-1 tabular-nums">{filteredLeads.length} Items</span>
-             </div>
              {canCreate && (
-               <Button onClick={() => router.push("/dashboard/leads/new")} className="shadow-lg shadow-primary/10 rounded-lg h-9 font-semibold text-xs px-4">
-                 <Plus className="mr-2 h-3.5 w-3.5" /> Add Sale
+               <Button onClick={() => router.push("/dashboard/leads/new")} className="rounded-lg h-9 font-semibold text-xs px-4 shadow-sm border border-primary/20">
+                 <Plus className="mr-2 h-3.5 w-3.5" /> Add Opportunity
                </Button>
              )}
           </div>
         </div>
 
-        {/* Controller Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-xl border border-border/40 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
+        {/* Minimalist Controller Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 flex-1 w-full">
              {/* Status Filter */}
-             <div className="relative min-w-[120px]">
+             <div className="relative min-w-[140px]">
                 <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-border/40 bg-card px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
+                    className="flex h-9 w-full rounded-lg border border-border/40 bg-background pl-3 pr-8 text-[11px] font-bold uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm hover:border-primary/30 transition-all font-sans"
                 >
                     <option value="all">All Status</option>
                     <option value="New">New</option>
@@ -229,7 +225,7 @@ export default function LeadsPage() {
                     <option value="Won">Won</option>
                     <option value="Lost">Lost</option>
                 </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[8px]">▼</div>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 text-[9px]">▼</div>
              </div>
 
              {/* Dynamic Management Filters */}
@@ -241,21 +237,21 @@ export default function LeadsPage() {
                 setSelectedEmp={setSelectedEmployeeId}
              />
             
-            <div className="relative flex-1 group">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 h-3.5 w-3.5 group-focus-within:text-primary transition-colors" />
+            <div className="relative flex-1 group min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 h-3.5 w-3.5 group-focus-within:text-primary transition-colors" />
                 <Input 
-                placeholder="Search leads..." 
-                className="pl-10 h-10 bg-transparent border-none focus-visible:ring-0 text-sm font-medium"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search leads..." 
+                  className="pl-9 h-9 bg-background border border-border/40 focus:ring-primary/40 rounded-lg text-xs font-medium placeholder:text-muted-foreground/50"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 px-2">
+          <div className="flex items-center gap-2">
             <ViewToggle view={view} onViewChange={setView} />
-            <div className="h-4 w-[1px] bg-border/40 mx-2" />
-            <Button variant="ghost" size="sm" className="h-9 px-3 text-xs font-semibold text-muted-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setSelectedStatus("all")}}>
+            <div className="h-4 w-px bg-border/40 mx-1" />
+            <Button variant="ghost" size="sm" className="h-9 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setSelectedStatus("all")}}>
               Reset
             </Button>
           </div>
@@ -263,7 +259,7 @@ export default function LeadsPage() {
 
         {/* Error state */}
         {queryError && (
-          <div className="bg-destructive/5 border border-destructive/20 text-destructive text-center py-3 rounded-lg font-semibold text-[11px]" role="alert">
+          <div className="bg-destructive/5 border border-destructive/20 text-destructive text-center py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-widest" role="alert">
             Error: {(queryError as any).message || "Failed to fetch leads"}
           </div>
         )}
@@ -271,63 +267,61 @@ export default function LeadsPage() {
         {/* Main Content Area */}
         {filteredLeads.length > 0 ? (
           view === "list" ? (
-            <div className="bg-card rounded-xl border border-border/40 shadow-xs overflow-hidden">
+            <div className="bg-background rounded-lg border border-border/40 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-muted/30 border-b border-border/30">
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Name</th>
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Company</th>
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Source</th>
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                    <tr className="bg-muted/30 border-b border-border/40">
+                      <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Name</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Entity</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Source</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">Status</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-[0.15em] text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/20">
+                  <tbody className="divide-y divide-border/10">
                     {filteredLeads.map((lead) => (
-                      <tr key={lead.id} className="group border-b border-border/10">
-                        <td className="px-6 py-4">
+                      <tr key={lead.id} className="group hover:bg-muted/20 transition-colors">
+                        <td className="px-5 py-4">
                           <div className="flex flex-col">
-                            <span className="font-semibold text-sm text-foreground tracking-tight underline-offset-4 decoration-primary/30 cursor-pointer" onClick={() => router.push(`/dashboard/leads/${lead.id}`)}>{lead.name}</span>
-                            <span className="text-[10px] font-medium text-muted-foreground/60 mt-0.5">{lead.email}</span>
+                            <span className="font-semibold text-[13px] text-foreground tracking-tight hover:text-primary cursor-pointer transition-colors" onClick={() => router.push(`/dashboard/leads/${lead.id}`)}>{lead.name}</span>
+                            <span className="text-[10px] font-medium text-muted-foreground/50 mt-0.5">{lead.email}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-xs font-semibold text-foreground/80">
-                            {lead.company || <span className="opacity-10">—</span>}
-                          </span>
+                        <td className="px-5 py-4 text-[12px] font-medium text-muted-foreground">
+                          {lead.company || <span className="opacity-20">—</span>}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
-                             <div className="h-1.5 w-1.5 rounded-full bg-primary/20" />
-                             <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase">
-                              {lead.source.replace("_", " ")}
+                             <div className="h-1.5 w-1.5 rounded-full bg-primary/20 transition-transform group-hover:scale-125 duration-300" />
+                             <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">
+                               {lead.source.replace("_", " ")}
                              </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <Badge variant={getStatusVariant(lead.status)} className="font-semibold text-[9px] uppercase tracking-wider py-0.5 px-2.5 rounded-md shadow-sm border-none">
+                        <td className="px-5 py-4">
+                          <Badge variant={getStatusVariant(lead.status)} className="font-bold text-[9px] uppercase tracking-[0.15em] py-0.5 px-3 rounded-full shadow-xs border-none cursor-default">
                             {lead.status.replace(/_/g, " ")}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-1.5 opacity-60">
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex justify-end gap-1.5">
                             <Button 
-                              variant="secondary" 
+                              variant="ghost" 
                               size="sm" 
-                              className="h-7 text-[10px] font-semibold px-3 rounded-md border border-border/40"
+                              className="h-7 text-[10px] font-bold uppercase tracking-widest px-2.5 rounded-md hover:bg-muted"
                               onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
                             >
-                              View
+                              Details
                             </Button>
                             {canDelete && (
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="h-7 text-[10px] font-semibold px-3 text-destructive rounded-md"
+                                className="h-7 text-[10px] font-bold uppercase tracking-widest px-2.5 text-destructive/60 hover:text-destructive hover:bg-destructive/5 rounded-md"
                                 onClick={() => handleDelete(lead.id, lead.name)}
                               >
-                                Delete
+                                Remove
                               </Button>
                             )}
                           </div>

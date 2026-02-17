@@ -50,7 +50,8 @@ export function usePermissions() {
     isAdmin: role === 'ADMIN',
     isUnassigned: role === 'UNASSIGNED',
     refreshPermissions: refetch,
-    permissions
-  }), [hasPermission, hasModule, role, refetch, permissions])
+    permissions,
+    isLoading
+  }), [hasPermission, hasModule, role, refetch, permissions, isLoading])
 }
 
