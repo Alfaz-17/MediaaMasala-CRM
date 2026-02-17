@@ -145,18 +145,17 @@ async function main() {
       { module: 'eod', action: 'view', scopeType: 'department' },
       { module: 'eod', action: 'view', scopeType: 'team' },
       { module: 'eod', action: 'view', scopeType: 'own' },
-      { module: 'eod', action: 'create', scopeType: 'all' },
+      { module: 'eod', action: 'create', scopeType: 'own' },
       
       // Attendance
       { module: 'attendance', action: 'view', scopeType: 'all' },
       { module: 'attendance', action: 'view', scopeType: 'department' },
       { module: 'attendance', action: 'view', scopeType: 'team' },
       { module: 'attendance', action: 'view', scopeType: 'own' },
-      { module: 'attendance', action: 'create', scopeType: 'all' },
+      { module: 'attendance', action: 'create', scopeType: 'own' },
       { module: 'attendance', action: 'approve', scopeType: 'all' },
       { module: 'attendance', action: 'approve', scopeType: 'department' },
       { module: 'attendance', action: 'approve', scopeType: 'team' },
-      { module: 'attendance', action: 'approve', scopeType: 'own' },
       
       // Employees
       { module: 'employees', action: 'view', scopeType: 'all' },
@@ -255,9 +254,9 @@ async function main() {
         { module: 'products', action: 'create', scope: 'all' },
         { module: 'products', action: 'delete', scope: 'all' },
         { module: 'eod', action: 'view', scope: 'department' },
-        { module: 'eod', action: 'create', scope: 'all' },
+        { module: 'eod', action: 'create', scope: 'own' },
         { module: 'attendance', action: 'view', scope: 'department' },
-        { module: 'attendance', action: 'create', scope: 'all' },
+        { module: 'attendance', action: 'create', scope: 'own' },
         { module: 'attendance', action: 'approve', scope: 'department' },
         { module: 'employees', action: 'view', scope: 'department' },
         { module: 'employees', action: 'edit', scope: 'department' },
@@ -296,8 +295,8 @@ async function main() {
         { module: 'leads', action: 'edit', scope: 'own' },
         { module: 'tasks', action: 'view', scope: 'own' },
         { module: 'tasks', action: 'edit', scope: 'own' },
-        { module: 'eod', action: 'create', scope: 'all' },
-        { module: 'attendance', action: 'create', scope: 'all' },
+        { module: 'eod', action: 'create', scope: 'own' },
+        { module: 'attendance', action: 'create', scope: 'own' },
       ]);
     }
 

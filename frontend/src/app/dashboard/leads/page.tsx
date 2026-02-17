@@ -114,19 +114,26 @@ function LeadsSkeleton({ view }: { view: ViewType }) {
   )
 }
 
+import { ManagementFilters } from "@/components/dashboard/management-filters"
+
 export default function LeadsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [view, setView] = useState<ViewType>("list")
   const { hasPermission } = usePermissions()
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
 
   const { data: leads = [], isLoading, error: queryError } = useQuery<Lead[]>({
-    queryKey: ["leads", session?.user?.email],
+    queryKey: ["leads", session?.user?.email, selectedDeptId, selectedEmployeeId],
     queryFn: async () => {
-      const data = await apiClient.get("/leads")
+      let endpoint = "/leads?"
+      if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
+      if (selectedEmployeeId !== 'all') endpoint += `ownerId=${selectedEmployeeId}&`
+      
+      const data = await apiClient.get(endpoint)
       return Array.isArray(data) ? data : (data.leads || [])
     },
     enabled: status === "authenticated",
@@ -147,29 +154,15 @@ export default function LeadsPage() {
     
     try {
       await apiClient.delete(`/leads/${id}`)
-      // Invalidate query to refetch leads
-      router.refresh() // Or use queryClient.invalidateQueries(["leads"])
+      router.refresh()
     } catch (err: any) {
       alert(err.message || "Deletion failed")
     }
   }
 
-  // Compute unique employees for filter
-  const uniqueEmployees = Array.from(new Set(leads.map(l => l.owner?.firstName + " " + l.owner?.lastName + "|" + l.owner?.firstName)))
-    .map(e => {
-       return e.split("|")[0]
-    })
-    .filter((value, index, self) => self.indexOf(value) === index && value.trim() !== "undefined undefined")
-
   const filteredLeads = useMemo(() => {
     let filtered = leads;
 
-    // Filter by employee
-    if (selectedEmployeeId !== "all") {
-        filtered = filtered.filter(l => `${l.owner?.firstName} ${l.owner?.lastName}` === selectedEmployeeId)
-    }
-
-    // Filter by status
     if (selectedStatus !== "all") {
         filtered = filtered.filter(l => l.status === selectedStatus)
     }
@@ -179,7 +172,7 @@ export default function LeadsPage() {
       lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.company?.toLowerCase().includes(searchQuery.toLowerCase())
     )
-  }, [leads, searchQuery, selectedEmployeeId, selectedStatus])
+  }, [leads, searchQuery, selectedStatus])
 
   if (status === "loading" || isLoading) {
     return (
@@ -216,13 +209,13 @@ export default function LeadsPage() {
 
         {/* Controller Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-xl border border-border/40 shadow-xs">
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex flex-wrap items-center gap-2 flex-1">
              {/* Status Filter */}
-             <div className="relative min-w-[140px]">
+             <div className="relative min-w-[120px]">
                 <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-border/40 bg-card px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
+                    className="flex h-9 w-full rounded-lg border border-border/40 bg-card px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
                 >
                     <option value="all">All Status</option>
                     <option value="New">New</option>
@@ -239,22 +232,14 @@ export default function LeadsPage() {
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[8px]">▼</div>
              </div>
 
-             {/* Employee Filter - Only show if we have multiple people */}
-             {uniqueEmployees.length > 1 && (
-                <div className="relative min-w-[160px]">
-                    <select
-                        value={selectedEmployeeId}
-                        onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                        className="flex h-10 w-full rounded-lg border border-border/40 bg-card px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
-                    >
-                        <option value="all">All Custodians</option>
-                        {uniqueEmployees.map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                        ))}
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[8px]">▼</div>
-                </div>
-            )}
+             {/* Dynamic Management Filters */}
+             <ManagementFilters 
+                module="leads"
+                selectedDept={selectedDeptId}
+                setSelectedDept={setSelectedDeptId}
+                selectedEmp={selectedEmployeeId}
+                setSelectedEmp={setSelectedEmployeeId}
+             />
             
             <div className="relative flex-1 group">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 h-3.5 w-3.5 group-focus-within:text-primary transition-colors" />

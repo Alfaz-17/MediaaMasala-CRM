@@ -38,7 +38,7 @@ const productSelect = {
 export const getTasks = async (req: Request, res: Response) => {
   const user = (req as any).user;
   const scope = (req as any).permissionScope;
-  const { filter } = req.query;
+  const { filter, departmentId, assigneeId } = req.query;
 
   try {
     let whereClause: any = {};
@@ -60,9 +60,44 @@ export const getTasks = async (req: Request, res: Response) => {
       ];
     }
 
-    // 2. Apply explicit filters
+    // 2. Apply explicit filters (Team/Dept)
+    if (departmentId) {
+      const targetDeptId = Number(departmentId);
+      // Valid if Admin (all) or if it's the user's own department
+      if (scope === 'all' || (scope !== 'own' && targetDeptId === user.departmentId)) {
+        whereClause.assignee = { departmentId: targetDeptId };
+        // Remove OR if we are strictly filtering by department
+        delete whereClause.OR;
+      }
+    }
+
+    if (assigneeId) {
+      const targetAssigneeId = Number(assigneeId);
+      let isAllowed = false;
+
+      if (scope === 'all') {
+        isAllowed = true;
+      } else if (scope === 'department') {
+        const emp = await prisma.employee.findUnique({ where: { id: targetAssigneeId } });
+        isAllowed = (emp?.departmentId === user.departmentId);
+      } else if (scope === 'team') {
+        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+        const teamIds = [user.employeeId, ...reporteeIds];
+        isAllowed = teamIds.includes(targetAssigneeId);
+      } else if (scope === 'own') {
+        isAllowed = (targetAssigneeId === user.employeeId);
+      }
+
+      if (isAllowed) {
+        whereClause.assigneeId = targetAssigneeId;
+        delete whereClause.OR; // Narrow down to specific assignee
+      }
+    }
+
+    // 3. Legacy filter compatibility
     if (filter === 'my') {
       whereClause.assigneeId = user.employeeId;
+      delete whereClause.OR;
     }
 
     const tasks = await (prisma as any).task.findMany({
@@ -159,6 +194,33 @@ export const createTask = async (req: Request, res: Response) => {
   const user = (req as any).user;
 
   try {
+    const scope = (req as any).permissionScope;
+
+    // RBAC: Validate Assignee based on Scope
+    const targetAssigneeId = assigneeId || user.employeeId;
+
+    if (scope === 'own' && targetAssigneeId !== user.employeeId) {
+      return res.status(403).json({ message: 'Access denied: You can only assign tasks to yourself' });
+    }
+
+    if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      const teamIds = [user.employeeId, ...reporteeIds];
+      if (!teamIds.includes(Number(targetAssigneeId))) {
+        return res.status(403).json({ message: 'Access denied: You can only assign tasks to members of your team' });
+      }
+    }
+
+    if (scope === 'department') {
+      const assigneeEmp = await prisma.employee.findUnique({ 
+        where: { id: Number(targetAssigneeId) },
+        select: { departmentId: true }
+      });
+      if (!assigneeEmp || assigneeEmp.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied: You can only assign tasks within your department' });
+      }
+    }
+
     const task = await (prisma as any).task.create({
       data: {
         title,
@@ -166,7 +228,7 @@ export const createTask = async (req: Request, res: Response) => {
         dueDate: new Date(dueDate),
         priority,
         status: 'Pending',
-        assigneeId: assigneeId || user.employeeId,
+        assigneeId: Number(targetAssigneeId),
         creatorId: user.employeeId,
         relatedToLeadId: leadId ? String(leadId) : null,
         projectId: projectId ? Number(projectId) : null,

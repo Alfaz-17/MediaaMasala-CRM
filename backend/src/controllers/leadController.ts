@@ -21,6 +21,7 @@ export const getLeads = async (req: Request, res: Response) => {
   const scope = (req as any).permissionScope;
 
   try {
+    const { departmentId, ownerId } = req.query;
     let whereClause: any = {};
 
     if (scope === 'own') {
@@ -30,6 +31,36 @@ export const getLeads = async (req: Request, res: Response) => {
     } else if (scope === 'team') {
       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       whereClause.ownerId = { in: [user.employeeId, ...reporteeIds] };
+    }
+
+    // Apply additional filters if scope allows
+    if (departmentId) {
+      const targetDeptId = Number(departmentId);
+      if (scope === 'all') {
+        whereClause.departmentId = targetDeptId;
+      } else if (scope === 'department' && targetDeptId === user.departmentId) {
+        whereClause.departmentId = targetDeptId;
+      } else if (scope === 'team' && targetDeptId === user.departmentId) {
+        whereClause.departmentId = targetDeptId;
+      }
+    }
+
+    if (ownerId) {
+      const targetOwnerId = Number(ownerId);
+      if (scope === 'all') {
+        whereClause.ownerId = targetOwnerId;
+      } else if (scope === 'department') {
+        const ownerEmp = await prisma.employee.findUnique({ where: { id: targetOwnerId } });
+        if (ownerEmp && ownerEmp.departmentId === user.departmentId) {
+          whereClause.ownerId = targetOwnerId;
+        }
+      } else if (scope === 'team') {
+        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+        const teamIds = [user.employeeId, ...reporteeIds];
+        if (teamIds.includes(targetOwnerId)) {
+          whereClause.ownerId = targetOwnerId;
+        }
+      }
     }
 
     const leads = await prisma.lead.findMany({
@@ -153,6 +184,17 @@ export const createLead = async (req: Request, res: Response) => {
   const user = (req as any).user;
 
   try {
+    const scope = (req as any).permissionScope;
+
+    // RBAC: Validate Department/Owner
+    let finalDepartmentId = departmentId ? Number(departmentId) : user.departmentId;
+    let finalOwnerId = user.employeeId;
+
+    if (scope === 'department' || scope === 'own') {
+      // Force user's department if they don't have 'all' scope
+      finalDepartmentId = user.departmentId;
+    }
+
     const lead = await prisma.lead.create({
       data: {
         name,
@@ -161,8 +203,8 @@ export const createLead = async (req: Request, res: Response) => {
         company,
         source,
         notes,
-        departmentId: departmentId || user.departmentId,
-        ownerId: user.employeeId // FIX: Use employeeId, not user.id
+        departmentId: finalDepartmentId,
+        ownerId: finalOwnerId
       }
     });
 

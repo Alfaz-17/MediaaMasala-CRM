@@ -132,6 +132,8 @@ function TasksSkeleton({ view }: { view: ViewType }) {
   )
 }
 
+import { ManagementFilters } from "@/components/dashboard/management-filters"
+
 export default function TasksPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -139,14 +141,18 @@ export default function TasksPage() {
   const [activeTab, setActiveTab] = useState<'my' | 'all'>('all')
   const [view, setView] = useState<ViewType>("list")
   const { hasPermission } = usePermissions()
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [selectedPriority, setSelectedPriority] = useState<string>("all")
 
   const { data: tasks = [], isLoading, error: queryError } = useQuery<Task[]>({
-    queryKey: ["tasks", activeTab, session?.user?.email],
+    queryKey: ["tasks", activeTab, session?.user?.email, selectedDeptId, selectedEmployeeId],
     queryFn: async () => {
-      const endpoint = activeTab === 'my' ? "/tasks?filter=my" : "/tasks"
+      let endpoint = activeTab === 'my' ? "/tasks?filter=my&" : "/tasks?"
+      if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
+      if (selectedEmployeeId !== 'all') endpoint += `assigneeId=${selectedEmployeeId}&`
+      
       const data = await apiClient.get(endpoint)
       return Array.isArray(data) ? data : (data.tasks || [])
     },
@@ -174,27 +180,14 @@ export default function TasksPage() {
     }
   }
 
-  // Compute unique employees for filter
-  const uniqueEmployees = Array.from(new Set(tasks.map(t => t.assignee?.firstName + " " + t.assignee?.lastName + "|" + t.assignee?.firstName)))
-    .map(e => {
-       return e.split("|")[0]
-    })
-    .filter((value, index, self) => self.indexOf(value) === index && value.trim() !== "undefined undefined")
-
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
 
-    // Filter by employee
-    if (selectedEmployeeId !== "all") {
-        filtered = filtered.filter(t => `${t.assignee?.firstName} ${t.assignee?.lastName}` === selectedEmployeeId)
-    }
-
-    // Filter by status
+    // Client-side filters for status and priority
     if (selectedStatus !== "all") {
         filtered = filtered.filter(t => t.status === selectedStatus)
     }
 
-    // Filter by priority
     if (selectedPriority !== "all") {
         filtered = filtered.filter(t => t.priority === selectedPriority)
     }
@@ -206,7 +199,7 @@ export default function TasksPage() {
       task.project?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.product?.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
-  }, [tasks, searchQuery, selectedEmployeeId, selectedStatus, selectedPriority])
+  }, [tasks, searchQuery, selectedStatus, selectedPriority])
 
   if (status === "loading" || isLoading) return (
     <PermissionGuard module="tasks" action="view">
@@ -241,7 +234,7 @@ export default function TasksPage() {
 
         {/* Controller Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-card p-1.5 rounded-xl border border-border/40 shadow-xs">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex bg-muted/30 p-1 rounded-lg border border-border/20">
                 <button 
                 onClick={() => setActiveTab('all')}
@@ -257,25 +250,17 @@ export default function TasksPage() {
                 </button>
             </div>
           
-            {/* Employee Filter - Only show if we have multiple people */}
-            {uniqueEmployees.length > 1 && (
-                <div className="relative min-w-[140px]">
-                    <select
-                        value={selectedEmployeeId}
-                        onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                        className="flex h-9 w-full rounded-lg border border-border/40 bg-card px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
-                    >
-                        <option value="all">All Assignees</option>
-                        {uniqueEmployees.map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                        ))}
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[8px]">▼</div>
-                </div>
-            )}
+            {/* Dynamic Management Filters */}
+            <ManagementFilters 
+                module="tasks"
+                selectedDept={selectedDeptId}
+                setSelectedDept={setSelectedDeptId}
+                selectedEmp={selectedEmployeeId}
+                setSelectedEmp={setSelectedEmployeeId}
+            />
 
             {/* Status Filter */}
-            <div className="relative min-w-[120px]">
+            <div className="relative min-w-[110px]">
                 <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}

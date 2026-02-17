@@ -152,12 +152,33 @@ export const createProject = async (req: Request, res: Response) => {
   const user = (req as any).user;
 
   try {
+    const scope = (req as any).permissionScope;
+
+    if (leadId) {
+      // RBC: Verify lead access
+      const lead = await prisma.lead.findUnique({ where: { id: String(leadId) } });
+      if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+      if (scope === 'own' && lead.ownerId !== user.employeeId) {
+        return res.status(403).json({ message: 'Access denied: You can only create projects for your own leads' });
+      }
+      if (scope === 'department' && lead.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied: Lead belongs to another department' });
+      }
+      if (scope === 'team') {
+        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+        if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
+          return res.status(403).json({ message: 'Access denied: Lead not in your team scope' });
+        }
+      }
+    }
+
     const project = await (prisma as any).project.create({
       data: {
         name,
         description,
         status: status || 'Active',
-        leadId: leadId ? Number(leadId) : undefined
+        leadId: leadId ? String(leadId) : undefined
       }
     });
 

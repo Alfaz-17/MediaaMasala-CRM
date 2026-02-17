@@ -34,11 +34,12 @@ interface EodReport {
   }
 }
 
+import { useQuery } from "@tanstack/react-query"
+import { ManagementFilters } from "@/components/dashboard/management-filters"
+
 export default function EodPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [reports, setReports] = useState<EodReport[]>([])
-  const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
@@ -46,24 +47,29 @@ export default function EodPage() {
   const [content, setContent] = useState("")
   const [leadsCount, setLeadsCount] = useState(0)
   const [tasksCount, setTasksCount] = useState(0)
+  
+  // Filter State
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [selectedDate, setSelectedDate] = useState<string>("")
 
-  const fetchReports = async () => {
-    if (status !== "authenticated") return
-    try {
-      const data = await apiClient.get("/eod")
-      setReports(data)
-    } catch (err) {
-      console.error("Error fetching EOD reports:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: reports = [], isLoading, refetch } = useQuery<EodReport[]>({
+    queryKey: ["eod-reports", session?.user?.email, selectedDeptId, selectedEmployeeId],
+    queryFn: async () => {
+      let endpoint = "/eod?"
+      if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
+      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      
+      return await apiClient.get(endpoint)
+    },
+    enabled: status === "authenticated",
+  })
 
   useEffect(() => {
-    fetchReports()
-  }, [status])
+    if (status === "unauthenticated") {
+      router.push("/auth/login")
+    }
+  }, [status, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,7 +86,7 @@ export default function EodPage() {
       setContent("")
       setLeadsCount(0)
       setTasksCount(0)
-      fetchReports()
+      refetch()
     } catch (err) {
       console.error("Error submitting EOD:", err)
     } finally {
@@ -88,21 +94,12 @@ export default function EodPage() {
     }
   }
 
-  // Compute unique employees for filter
-  const uniqueEmployees = Array.from(new Set(reports.map(r => r.employee?.firstName + " " + r.employee?.lastName + "|" + r.employee?.firstName)))
-    .map(e => {
-       return e.split("|")[0]
-    })
-    .filter((value, index, self) => self.indexOf(value) === index && value.trim() !== "undefined undefined")
-
-  // Filter records by employee and date
+  // Client-side date filter (server-side date filtering can be added later if needed)
   const filteredReports = reports.filter(r => {
-    const matchesEmployee = selectedEmployeeId === "all" || `${r.employee?.firstName} ${r.employee?.lastName}` === selectedEmployeeId
-    const matchesDate = !selectedDate || r.date.startsWith(selectedDate)
-    return matchesEmployee && matchesDate
+    return !selectedDate || r.date.startsWith(selectedDate)
   })
 
-  if (loading) return <div className="p-10 text-center animate-pulse text-muted-foreground font-medium">Loading Reports...</div>
+  if (isLoading) return <div className="p-10 text-center animate-pulse text-muted-foreground font-medium">Loading Reports...</div>
 
   return (
     <PermissionGuard module="eod">
@@ -135,21 +132,15 @@ export default function EodPage() {
               </div>
             )}
 
-             {/* Employee Filter - Only show if we have multiple people and not in form mode */}
-            {!showForm && uniqueEmployees.length > 1 && (
-               <div className="relative min-w-[200px]">
-                  <select
-                    value={selectedEmployeeId}
-                    onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-border/40 bg-card px-4 text-xs font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
-                  >
-                    <option value="all">All Employees ({reports.length})</option>
-                    {uniqueEmployees.map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[10px]">▼</div>
-               </div>
+             {/* Dynamic Management Filters - Not in form mode */}
+            {!showForm && (
+               <ManagementFilters 
+                  module="eod"
+                  selectedDept={selectedDeptId}
+                  setSelectedDept={setSelectedDeptId}
+                  selectedEmp={selectedEmployeeId}
+                  setSelectedEmp={setSelectedEmployeeId}
+               />
             )}
 
             <Button 
