@@ -148,15 +148,16 @@ export function LayoutShell({ children }: LayoutShellProps) {
     { href: "/dashboard/attendance", label: "Attendance", icon: CheckSquare, module: "attendance" },
     { href: "/dashboard/attendance/leaves", label: "Leaves", icon: Calendar, module: "attendance" },
     { href: "/dashboard/reports", label: "Reports", icon: FileText, module: "reports" },
-    { href: "/dashboard/logs", label: "System Logs", icon: Activity, module: "reports" },
+    { href: "/dashboard/logs", label: "System Logs", icon: Activity, module: "_admin_only" },
   ]
 
   const filteredNav = navItems.filter(item => {
     if (item.href === "/dashboard") return true
+    if (item.module === "_admin_only") return isAdmin
     return hasModule(item.module)
   })
 
-  const canSeeSettings = isAdmin || hasModule("employees")
+  const canSeeSettings = isAdmin
 
   const handleLogout = async () => {
     try {

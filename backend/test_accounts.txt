@@ -1,0 +1,5 @@
+--- TEST ACCOUNTS ---
+| Name | Email | Role | Department |
+|---|---|---|---|
+| Super Admin | superadmin@media-masala.com | Admin | Administration |
+------------------------

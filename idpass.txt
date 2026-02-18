@@ -1,7 +1,13 @@
-
-
-123456
-
-
-superadmin@media-masala.com
-Password@123
+Admin (superadmin@media-masala.com)  ← ALL scope
+└── Sales HOD  (sales.hod@test.com)  ← DEPARTMENT scope
+    └── Sales BM   (sales.bm@test.com)  ← TEAM scope
+        ├── Sales BDM-1  (sales.bdm1@test.com)  ← TEAM scope
+        │   ├── BDE-1A  (sales.bde1a@test.com)  → 10 Leads
+        │   ├── BDE-1B  (sales.bde1b@test.com)  → 10 Leads
+        │   ├── BDE-1C  (sales.bde1c@test.com)  → 10 Leads
+        │   └── BDE-1D  (sales.bde1d@test.com)  → 10 Leads
+        └── Sales BDM-2  (sales.bdm2@test.com)  ← TEAM scope
+            ├── BDE-2A  (sales.bde2a@test.com)  → 10 Leads
+            ├── BDE-2B  (sales.bde2b@test.com)  → 10 Leads
+            ├── BDE-2C  (sales.bde2c@test.com)  → 10 Leads
+            └── BDE-2D  (sales.bde2d@test.com)  → 10 Leads
