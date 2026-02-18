@@ -57,6 +57,7 @@ async function main() {
     { module: 'tasks', action: 'edit', scope: 'team' },
     { module: 'tasks', action: 'assign', scope: 'all' },
     { module: 'eod',   action: 'view', scope: 'team' },
+    { module: 'eod',   action: 'view', scope: 'team' },
     { module: 'eod',   action: 'create', scope: 'own' },
     { module: 'attendance', action: 'view', scope: 'team' },
     { module: 'attendance', action: 'create', scope: 'own' },

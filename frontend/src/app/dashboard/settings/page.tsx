@@ -29,7 +29,7 @@ const SETTINGS_CARDS = [
   {
     title: "Permission Settings",
     description: "Fine-tune what each role can see and do.",
-    href: "/dashboard/settings/permissions",
+    href: "/dashboard/settings/permission-matrix",
     icon: "🕸️",
     color: "bg-amber-50 text-amber-600"
   }
