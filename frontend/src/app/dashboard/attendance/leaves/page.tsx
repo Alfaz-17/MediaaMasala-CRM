@@ -1,5 +1,3 @@
-"use client"
-
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +10,8 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { Calendar, FileText, CheckCircle2, XCircle, Clock, Plus, Filter } from "lucide-react"
 import { toast } from "sonner"
 import { PermissionGuard } from "@/components/permission-guard"
+import { useQuery } from "@tanstack/react-query"
+import { ManagementFilters } from "@/components/dashboard/management-filters"
 import {
   Dialog,
   DialogContent,
@@ -43,31 +43,26 @@ interface LeaveRequest {
 }
 
 export default function LeavesPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const { hasPermission } = usePermissions()
-  const [leaves, setLeaves] = useState<LeaveRequest[]>([])
-  const [loading, setLoading] = useState(true)
   const [isSubmitOpen, setIsSubmitOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const canApprove = hasPermission("attendance", "approve")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
 
-  const fetchLeaves = async () => {
-    try {
-      const data = await apiClient.get("/leaves")
-      setLeaves(data)
-    } catch (err) {
-      console.error("Failed to fetch leaves:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchLeaves()
-  }, [])
+  const { data: leaves = [], isLoading, refetch } = useQuery<LeaveRequest[]>({
+    queryKey: ["leaves", session?.user?.email, selectedDeptId, selectedEmployeeId],
+    queryFn: async () => {
+      let endpoint = "/leaves?"
+      if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
+      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      return await apiClient.get(endpoint)
+    },
+    enabled: status === "authenticated",
+  })
 
   const handleSubmitLeave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -84,7 +79,7 @@ export default function LeavesPage() {
       await apiClient.post("/leaves", payload)
       toast.success("Leave request submitted")
       setIsSubmitOpen(false)
-      fetchLeaves()
+      refetch()
     } catch (err: any) {
       toast.error(err.message || "Submission failed")
     } finally {
@@ -96,7 +91,7 @@ export default function LeavesPage() {
     try {
       await apiClient.patch(`/leaves/${id}/approve`, { status })
       toast.success(`Request ${status.toLowerCase()}`)
-      fetchLeaves()
+      refetch()
     } catch (err: any) {
       toast.error(err.message || "Update failed")
     }
@@ -111,15 +106,9 @@ export default function LeavesPage() {
     }
   }
 
-  // Compute unique employees for filter
-  const uniqueEmployees = Array.from(new Set(leaves.map(l => l.employee?.firstName + " " + l.employee?.lastName)))
-    .filter((value, index, self) => self.indexOf(value) === index && value.trim() !== "undefined undefined")
-
-  // Filter leaves by status and employee
+  // Filter leaves by status only (emp/dept filtered by server)
   const filteredLeaves = leaves.filter(l => {
-    const matchesStatus = selectedStatus === "all" || l.status === selectedStatus
-    const matchesEmployee = selectedEmployeeId === "all" || `${l.employee?.firstName} ${l.employee?.lastName}` === selectedEmployeeId
-    return matchesStatus && matchesEmployee
+    return selectedStatus === "all" || l.status === selectedStatus
   })
 
   return (
@@ -148,22 +137,14 @@ export default function LeavesPage() {
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[10px]">▼</div>
             </div>
 
-            {/* Employee Filter */}
-            {uniqueEmployees.length > 1 && (
-              <div className="relative min-w-[180px]">
-                <select
-                  value={selectedEmployeeId}
-                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-border/40 bg-card px-4 text-xs font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
-                >
-                  <option value="all">All Employees</option>
-                  {uniqueEmployees.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[10px]">▼</div>
-              </div>
-            )}
+            {/* Management Filters */}
+            <ManagementFilters 
+              module="attendance"
+              selectedDept={selectedDeptId}
+              setSelectedDept={setSelectedDeptId}
+              selectedEmp={selectedEmployeeId}
+              setSelectedEmp={setSelectedEmployeeId}
+            />
 
             <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>
               <DialogTrigger asChild>
@@ -218,7 +199,7 @@ export default function LeavesPage() {
 
         {/* Leave Requests Grid */}
         <div className="grid gap-6">
-          {loading ? (
+          {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="h-48 rounded-2xl bg-muted/20 animate-pulse border border-border/10" />

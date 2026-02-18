@@ -7,6 +7,7 @@ export const getAttendance = async (req: Request, res: Response) => {
   const scope = (req as any).permissionScope;
 
   try {
+    const { departmentId, employeeId } = req.query;
     let whereClause: any = {};
 
     if (scope === 'own') {
@@ -18,6 +19,34 @@ export const getAttendance = async (req: Request, res: Response) => {
       whereClause.employeeId = { in: [user.employeeId, ...reporteeIds] };
     }
 
+    // Apply additional filters if scope allows
+    if (departmentId) {
+      const targetDeptId = Number(departmentId);
+      if (scope === 'all') {
+        whereClause.employee = { ...whereClause.employee, departmentId: targetDeptId };
+      } else if ((scope === 'department' || scope === 'team') && targetDeptId === user.departmentId) {
+        whereClause.employee = { ...whereClause.employee, departmentId: targetDeptId };
+      }
+    }
+
+    if (employeeId) {
+      const targetEmpId = Number(employeeId);
+      if (scope === 'all') {
+        whereClause.employeeId = targetEmpId;
+      } else if (scope === 'department') {
+        const emp = await prisma.employee.findUnique({ where: { id: targetEmpId } });
+        if (emp && emp.departmentId === user.departmentId) {
+          whereClause.employeeId = targetEmpId;
+        }
+      } else if (scope === 'team') {
+        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+        const teamIds = [user.employeeId, ...reporteeIds];
+        if (teamIds.includes(targetEmpId)) {
+          whereClause.employeeId = targetEmpId;
+        }
+      }
+    }
+
     const attendance = await (prisma as any).attendance.findMany({
       where: whereClause,
       include: {
@@ -25,10 +54,12 @@ export const getAttendance = async (req: Request, res: Response) => {
           select: { firstName: true, lastName: true, department: { select: { name: true } } }
         }
       },
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
+      take: 100
     });
     res.json(attendance);
   } catch (error) {
+    console.error('Error fetching attendance:', error);
     res.status(500).json({ message: 'Error fetching attendance' });
   }
 };

@@ -1,5 +1,3 @@
-"use client"
-
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -9,6 +7,8 @@ import { apiClient } from "@/lib/api-client"
 import { Clock, MapPin, CheckCircle2, LogOut, Calendar as CalendarIcon, History } from "lucide-react"
 import { toast } from "sonner"
 import { PermissionGuard } from "@/components/permission-guard"
+import { useQuery } from "@tanstack/react-query"
+import { ManagementFilters } from "@/components/dashboard/management-filters"
 
 interface AttendanceRecord {
   id: number
@@ -26,43 +26,36 @@ interface AttendanceRecord {
 }
 
 export default function AttendancePage() {
-  const { data: session } = useSession()
-  const [records, setRecords] = useState<AttendanceRecord[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: session, status } = useSession()
   const [isCheckingIn, setIsCheckingIn] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
-  const [activeRecord, setActiveRecord] = useState<AttendanceRecord | null>(null)
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [selectedDate, setSelectedDate] = useState<string>("")
 
-  const fetchAttendance = async () => {
-    try {
-      const data = await apiClient.get("/attendance")
-      setRecords(data)
-      
-      // Find today's active record (check-in today but no check-out)
-      const today = new Date().toISOString().split('T')[0]
-      const active = data.find((r: AttendanceRecord) => 
-        r.date.startsWith(today) && !r.checkOut
-      )
-      setActiveRecord(active || null)
-    } catch (err) {
-      console.error("Failed to fetch attendance:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: records = [], isLoading, refetch } = useQuery<AttendanceRecord[]>({
+    queryKey: ["attendance", session?.user?.email, selectedDeptId, selectedEmployeeId],
+    queryFn: async () => {
+      let endpoint = "/attendance?"
+      if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
+      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      return await apiClient.get(endpoint)
+    },
+    enabled: status === "authenticated",
+  })
 
-  useEffect(() => {
-    if (session) fetchAttendance()
-  }, [session])
+  // Find today's active record (check-in today but no check-out)
+  const today = new Date().toISOString().split('T')[0]
+  const activeRecord = records.find((r: AttendanceRecord) => 
+    r.date.startsWith(today) && !r.checkOut && r.employee?.firstName === session?.user?.name?.split(' ')[0] // Simplified self-check
+  )
 
   const handleCheckIn = async () => {
     setIsCheckingIn(true)
     try {
       await apiClient.post("/attendance/check-in", {})
       toast.success("Checked in successfully")
-      fetchAttendance()
+      refetch()
     } catch (err: any) {
       toast.error(err.message || "Check-in failed")
     } finally {
@@ -71,12 +64,11 @@ export default function AttendancePage() {
   }
 
   const handleCheckOut = async () => {
-    if (!activeRecord) return
     setIsCheckingOut(true)
     try {
       await apiClient.post("/attendance/check-out", {})
       toast.success("Checked out successfully")
-      fetchAttendance()
+      refetch()
     } catch (err: any) {
       toast.error(err.message || "Check-out failed")
     } finally {
@@ -84,18 +76,9 @@ export default function AttendancePage() {
     }
   }
 
-  // Compute unique employees for filter
-  const uniqueEmployees = Array.from(new Set(records.map(r => r.employee?.firstName + " " + r.employee?.lastName + "|" + r.employee?.firstName)))
-    .map(e => {
-       return e.split("|")[0]
-    })
-    .filter((value, index, self) => self.indexOf(value) === index && value.trim() !== "undefined undefined")
-
-  // Filter records by employee and date
+  // Filter records by date only (emp/dept filtered by server)
   const filteredRecords = records.filter(r => {
-    const matchesEmployee = selectedEmployeeId === "all" || `${r.employee?.firstName} ${r.employee?.lastName}` === selectedEmployeeId
-    const matchesDate = !selectedDate || r.date.startsWith(selectedDate)
-    return matchesEmployee && matchesDate
+    return !selectedDate || r.date.startsWith(selectedDate)
   })
 
   return (
@@ -127,22 +110,14 @@ export default function AttendancePage() {
             )}
           </div>
 
-          {/* Employee Filter - Only show if we have multiple people */}
-          {uniqueEmployees.length > 1 && (
-             <div className="relative min-w-[200px]">
-                <select
-                  value={selectedEmployeeId}
-                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-border/40 bg-card px-4 text-xs font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm"
-                >
-                  <option value="all">All Employees ({records.length})</option>
-                  {uniqueEmployees.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[10px]">▼</div>
-             </div>
-          )}
+          {/* Management Filters */}
+          <ManagementFilters 
+            module="attendance"
+            selectedDept={selectedDeptId}
+            setSelectedDept={setSelectedDeptId}
+            selectedEmp={selectedEmployeeId}
+            setSelectedEmp={setSelectedEmployeeId}
+          />
 
           <div className="flex flex-col items-end px-4 border-r border-border/50">
              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] leading-none mb-1">Status</span>
@@ -213,7 +188,7 @@ export default function AttendancePage() {
           <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">History</h2>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-48 rounded-2xl bg-muted/20 animate-pulse border border-border/10" />
@@ -228,8 +203,8 @@ export default function AttendancePage() {
               <h3 className="text-sm font-bold text-muted-foreground/40 uppercase tracking-[0.4em]">No Records</h3>
               <p className="text-xs text-muted-foreground/60 mt-2">
                   {selectedEmployeeId !== "all" 
-                    ? `No attendance records found for ${selectedEmployeeId}.` 
-                    : "Your attendance log is empty. Clock in to start tracking."}
+                    ? `No attendance records found for this selection.` 
+                    : "No attendance records found."}
               </p>
             </CardContent>
           </Card>
@@ -252,7 +227,6 @@ export default function AttendancePage() {
                       {record.status}
                     </Badge>
                   </div>
-                  {/* Show employee name if filtering all or if multiple employees exist */}
                   <div className="mt-2 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
                       {record.employee?.firstName} {record.employee?.lastName}
                   </div>

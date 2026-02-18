@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
@@ -9,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Briefcase, Calendar, User } from "lucide-react"
 import { PermissionGuard } from "@/components/permission-guard"
+import { useQuery } from "@tanstack/react-query"
+import { ManagementFilters } from "@/components/dashboard/management-filters"
 
 interface Project {
   id: number
@@ -24,27 +24,25 @@ interface Project {
 }
 
 export default function ProjectsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
+  
+  // Filter State
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await apiClient.get("/projects")
-        setProjects(data)
-      } catch (err) {
-        console.error("Error fetching projects:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
+  const { data: projects = [], isLoading } = useQuery<Project[]>({
+    queryKey: ["projects", session?.user?.email, selectedDeptId, selectedEmployeeId],
+    queryFn: async () => {
+      let endpoint = "/projects?"
+      if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
+      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      return await apiClient.get(endpoint)
+    },
+    enabled: status === "authenticated",
+  })
 
-    if (session) fetchProjects()
-  }, [session])
-
-  if (loading) {
+  if (isLoading) {
     return <div className="p-8 animate-pulse text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Loading Projects...</div>
   }
 
@@ -56,6 +54,16 @@ export default function ProjectsPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h1>
             <p className="text-muted-foreground text-xs font-medium mt-1">View all your active projects here.</p>
           </div>
+
+          <div className="flex items-center gap-3">
+             <ManagementFilters 
+                module="projects"
+                selectedDept={selectedDeptId}
+                setSelectedDept={setSelectedDeptId}
+                selectedEmp={selectedEmployeeId}
+                setSelectedEmp={setSelectedEmployeeId}
+             />
+          </div>
         </div>
 
         {projects.length === 0 ? (
@@ -65,7 +73,11 @@ export default function ProjectsPage() {
                 <Briefcase className="h-6 w-6 text-primary opacity-60" />
               </div>
               <h3 className="text-sm font-bold text-foreground">No projects yet</h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">Win a sale to start your first project.</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
+                {selectedEmployeeId !== "all" 
+                    ? "No projects found for the selected user." 
+                    : "Win a sale to start your first project."}
+              </p>
             </CardContent>
           </Card>
         ) : (
