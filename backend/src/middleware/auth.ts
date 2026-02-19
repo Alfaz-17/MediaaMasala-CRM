@@ -11,7 +11,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   if (!token) return res.status(401).json({ message: 'Authentication token required' });
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) return res.status(403).json({ message: 'Invalid or expired token' });
+    if (err) return res.status(401).json({ message: 'Invalid or expired token' });
     (req as any).user = user;
     next();
   });

@@ -58,7 +58,7 @@ router.post('/login', async (req, res) => {
         permissions: permissions
       },
       JWT_SECRET,
-      { expiresIn: '8h' }
+      { expiresIn: '48h' }
     );
 
     res.json({

@@ -3,8 +3,7 @@
 import { useSession } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+import { apiClient } from "@/lib/api-client"
 
 export function usePermissions() {
   const { data: session, status } = useSession()
@@ -14,11 +13,7 @@ export function usePermissions() {
   const { data, refetch, isLoading } = useQuery({
     queryKey: ["permissions", accessToken],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
-      if (!res.ok) throw new Error("Failed to fetch permissions")
-      return res.json()
+      return await apiClient.get('/auth/me');
     },
     enabled: !!accessToken,
     staleTime: 5 * 60 * 1000,
