@@ -141,7 +141,8 @@ export function LayoutShell({ children }: LayoutShellProps) {
   
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, module: "dashboard" },
-    { href: "/dashboard/portfolio", label: "Portfolio", icon: Layers, module: "projects" },
+    { href: "/dashboard/projects", label: "Projects", icon: Layers, module: "projects" },
+    { href: "/dashboard/products", label: "Products", icon: ShoppingBag, module: "products" },
     { href: "/dashboard/leads", label: "Leads", icon: Users, module: "leads" },
     { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare, module: "tasks" },
     { href: "/dashboard/eod", label: "Daily Reports", icon: FileText, module: "eod" },

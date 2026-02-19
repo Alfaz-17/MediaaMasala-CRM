@@ -6,26 +6,62 @@ import prisma from '../lib/prisma';
  * @returns A promise that resolves to an array of employee IDs.
  */
 export async function getRecursiveReporteeIds(managerId: number): Promise<number[]> {
-  // Fetch all employees once to build the hierarchy in memory
-  // This is much faster than recursive DB queries for small to medium organizations
-  const allEmployees = await prisma.employee.findMany({
-    select: { id: true, managerId: true }
-  });
-
-  const reporteeIds: number[] = [];
-  const queue = [managerId];
-
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    const directReportees = allEmployees.filter(e => e.managerId === currentId);
+  try {
+    const result = await prisma.$queryRaw<Array<{ id: number }>>`
+      WITH RECURSIVE subordinates AS (
+        SELECT id FROM employees WHERE "managerId" = ${managerId}
+        UNION
+        SELECT e.id FROM employees e
+        INNER JOIN subordinates s ON s.id = e."managerId"
+      )
+      SELECT id FROM subordinates;
+    `;
     
-    for (const reportee of directReportees) {
-      if (!reporteeIds.includes(reportee.id)) {
-        reporteeIds.push(reportee.id);
-        queue.push(reportee.id);
-      }
-    }
+    return result.map(r => r.id);
+  } catch (error) {
+    console.error("Error fetching recursive reportees:", error);
+    return []; 
+  }
+}
+
+/**
+ * Builds a hierarchical tree of employees starting from a specific manager (or all if managerId is null).
+ */
+export async function getEmployeeHierarchy(managerId: number | null = null) {
+  let employeeIds: number[] | null = null;
+
+  // If we have a managerId, only fetch their subtree to optimize performance
+  if (managerId) {
+    const reporteeIds = await getRecursiveReporteeIds(managerId);
+    employeeIds = [managerId, ...reporteeIds];
   }
 
-  return reporteeIds;
+  const employees = await prisma.employee.findMany({
+    where: employeeIds ? { id: { in: employeeIds } } : {},
+    include: {
+      role: { select: { name: true, code: true } },
+      department: { select: { name: true, code: true } }
+    }
+  });
+
+  const buildTree = (mId: number | null): any[] => {
+    return employees
+      .filter(e => e.managerId === mId)
+      .map(e => ({
+        ...e,
+        children: buildTree(e.id)
+      }));
+  };
+
+  // If managerId is provide, we want the tree starting FROM that employee (including them)
+  if (managerId) {
+    const root = employees.find(e => e.id === managerId);
+    if (!root) return [];
+    return [{
+      ...root,
+      children: buildTree(root.id)
+    }];
+  }
+
+  return buildTree(null);
 }

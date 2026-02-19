@@ -54,6 +54,23 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const canCreateTask = hasPermission("tasks", "create")
   // Using projects:create as proxy for edit/manage since we just added edit permission or fallback to create
   const canEditProject = hasPermission("projects", "edit") || hasPermission("projects", "create")
+  const canDeleteProject = hasPermission("projects", "delete")
+
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDeleteProject = async () => {
+    if (!project) return
+    if (!confirm(`Are you sure you want to delete project: ${project.name}?`)) return
+
+    setDeleting(true)
+    try {
+      await apiClient.delete(`/projects/${project.id}`)
+      router.push("/dashboard/portfolio?tab=projects")
+    } catch (err) {
+      console.error("Error deleting project:", err)
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -217,6 +234,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     title="Status updates coming soon"
                   >
                      Update Status (Use List View)
+                  </Button>
+                )}
+                {canDeleteProject && (
+                  <Button 
+                    className="w-full justify-start text-[10px] font-bold uppercase tracking-widest h-9 text-destructive hover:bg-destructive/10 border-destructive/20" 
+                    variant="outline"
+                    onClick={handleDeleteProject}
+                    loading={deleting}
+                  >
+                     Delete Project
                   </Button>
                 )}
               </div>

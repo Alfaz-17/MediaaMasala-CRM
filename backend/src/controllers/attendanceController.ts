@@ -51,7 +51,7 @@ export const getAttendance = async (req: Request, res: Response) => {
       where: whereClause,
       include: {
         employee: {
-          select: { firstName: true, lastName: true, department: { select: { name: true } } }
+          select: { id: true, firstName: true, lastName: true, department: { select: { name: true } } }
         }
       },
       orderBy: { date: 'desc' },

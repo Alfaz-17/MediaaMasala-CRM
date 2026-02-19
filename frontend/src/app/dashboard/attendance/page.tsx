@@ -1,3 +1,5 @@
+"use client"
+
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +21,7 @@ interface AttendanceRecord {
   location?: string
   notes?: string
   employee?: {
+    id: number
     firstName: string
     lastName: string
     department: { name: string }
@@ -31,24 +34,59 @@ export default function AttendancePage() {
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
+  const [isRecursive, setIsRecursive] = useState<boolean>(false)
   const [selectedDate, setSelectedDate] = useState<string>("")
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<number | undefined>(session?.user?.employeeId)
 
-  const { data: records = [], isLoading, refetch } = useQuery<AttendanceRecord[]>({
-    queryKey: ["attendance", session?.user?.email, selectedDeptId, selectedEmployeeId],
+  // Self-healing: Fetch employee ID if missing from session
+  useEffect(() => {
+    if (status === "authenticated") {
+        if (session?.user?.employeeId) {
+            setCurrentEmployeeId(session.user.employeeId)
+        } else {
+            // Fallback fetch
+            apiClient.get('/auth/me').then(data => {
+                if (data.user?.employeeId) {
+                    console.log("Attendance: Recovered Employee ID from API", data.user.employeeId)
+                    setCurrentEmployeeId(data.user.employeeId)
+                }
+            }).catch(e => console.error("Failed to recover employee ID", e))
+        }
+    }
+  }, [session, status])
+
+  const { data: records = [], isLoading, isFetching, refetch } = useQuery<AttendanceRecord[]>({
+    queryKey: ["attendance", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = "/attendance?"
       if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
-      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      if (selectedEmployeeId !== 'all') {
+          endpoint += `employeeId=${selectedEmployeeId}&`
+          if (isRecursive) endpoint += `recursive=true&`
+      }
       return await apiClient.get(endpoint)
     },
     enabled: status === "authenticated",
   })
 
-  // Find today's active record (check-in today but no check-out)
-  const today = new Date().toISOString().split('T')[0]
-  const activeRecord = records.find((r: AttendanceRecord) => 
-    r.date.startsWith(today) && !r.checkOut && r.employee?.firstName === session?.user?.name?.split(' ')[0] // Simplified self-check
-  )
+  const activeRecord = records.find((r: AttendanceRecord) => {
+    // Check if record is for current user AND has no checkout
+    // Use currentEmployeeId (from session or recovered)
+    if (!currentEmployeeId) return false
+    
+    const isCurrentUser = r.employee?.id === currentEmployeeId
+    
+    // Check if record is from "today" (handle timezone differences by checking local date)
+    const recordDate = new Date(r.date)
+    const todayDate = new Date()
+    const isSameDay = recordDate.getDate() === todayDate.getDate() &&
+                      recordDate.getMonth() === todayDate.getMonth() &&
+                      recordDate.getFullYear() === todayDate.getFullYear()
+
+    return isCurrentUser && !r.checkOut && isSameDay
+  })
+
+  // Debug check removed as it is now handled by recovery logic
 
   const handleCheckIn = async () => {
     setIsCheckingIn(true)
@@ -116,7 +154,11 @@ export default function AttendancePage() {
             selectedDept={selectedDeptId}
             setSelectedDept={setSelectedDeptId}
             selectedEmp={selectedEmployeeId}
-            setSelectedEmp={setSelectedEmployeeId}
+            setSelectedEmp={(id, recursive) => {
+                setSelectedEmployeeId(id);
+                setIsRecursive(recursive);
+            }}
+            isRecursive={isRecursive}
           />
 
           <div className="flex flex-col items-end px-4 border-r border-border/50">
@@ -127,16 +169,28 @@ export default function AttendancePage() {
           </div>
           
           {!activeRecord ? (
-            <Button onClick={handleCheckIn} disabled={isCheckingIn} className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest px-6 shadow-lg shadow-primary/10">
-              <CheckCircle2 className="mr-2 h-4 w-4" /> {isCheckingIn ? "Processing..." : "Clock In"}
+            <Button onClick={handleCheckIn} loading={isCheckingIn} className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest px-6 shadow-lg shadow-primary/10">
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Clock In
             </Button>
           ) : (
-            <Button onClick={handleCheckOut} disabled={isCheckingOut} variant="destructive" className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest px-6 shadow-lg shadow-destructive/10">
-              <LogOut className="mr-2 h-4 w-4" /> {isCheckingOut ? "Processing..." : "Clock Out"}
+            <Button onClick={handleCheckOut} loading={isCheckingOut} variant="destructive" className="h-11 rounded-xl font-bold text-xs uppercase tracking-widest px-6 shadow-lg shadow-destructive/10">
+              <LogOut className="mr-2 h-4 w-4" /> Clock Out
             </Button>
           )}
         </div>
       </div>
+
+
+        {/* Loading Overlay */}
+        <div className={`transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none relative' : ''}`}>
+          {isFetching && !isLoading && (
+            <div className="absolute inset-0 z-50 flex items-start justify-center pt-24">
+               <div className="bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-primary/20 flex items-center gap-2">
+                 <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Updating...</span>
+               </div>
+            </div>
+          )}
 
       {/* Current Session Card */}
       {activeRecord && (
@@ -262,6 +316,7 @@ export default function AttendancePage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
     </PermissionGuard>

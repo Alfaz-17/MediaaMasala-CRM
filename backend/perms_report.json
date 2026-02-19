@@ -1,0 +1,101 @@
+[
+  {
+    "name": "Sales Head",
+    "code": "SALES_HEAD",
+    "permissions": [
+      "leads:view:department",
+      "leads:edit:department",
+      "leads:create:all",
+      "leads:assign:all",
+      "leads:delete:all",
+      "tasks:view:department",
+      "tasks:create:all",
+      "tasks:edit:department",
+      "tasks:delete:all",
+      "tasks:assign:all",
+      "projects:create:all",
+      "projects:view:department",
+      "projects:edit:department",
+      "projects:delete:all",
+      "products:view:all",
+      "products:edit:all",
+      "products:create:all",
+      "products:delete:all",
+      "eod:view:department",
+      "eod:create:own",
+      "attendance:view:department",
+      "attendance:create:own",
+      "attendance:approve:department",
+      "employees:view:department",
+      "employees:edit:department",
+      "reports:generate:department"
+    ],
+    "hasEmployeesView": true
+  },
+  {
+    "name": "Sales BM",
+    "code": "SALES_BM",
+    "permissions": [
+      "leads:view:team",
+      "leads:edit:team",
+      "leads:create:all",
+      "leads:assign:all",
+      "tasks:view:team",
+      "tasks:create:all",
+      "tasks:edit:team",
+      "tasks:assign:all",
+      "eod:view:team",
+      "eod:create:own",
+      "attendance:view:team",
+      "attendance:create:own",
+      "reports:generate:team",
+      "employees:view:team"
+    ],
+    "hasEmployeesView": true
+  },
+  {
+    "name": "Product Manager",
+    "code": "PROD_PM",
+    "permissions": [
+      "tasks:view:department",
+      "tasks:edit:department",
+      "tasks:create:all",
+      "projects:view:department",
+      "projects:edit:department",
+      "eod:view:department",
+      "attendance:view:department",
+      "employees:view:department",
+      "reports:generate:department"
+    ],
+    "hasEmployeesView": true
+  },
+  {
+    "name": "Project Manager",
+    "code": "PROJ_PM",
+    "permissions": [
+      "tasks:view:department",
+      "tasks:edit:department",
+      "tasks:create:all",
+      "projects:view:department",
+      "projects:edit:department",
+      "eod:view:department",
+      "attendance:view:department",
+      "employees:view:department",
+      "reports:generate:department"
+    ],
+    "hasEmployeesView": true
+  },
+  {
+    "name": "Operation Manager",
+    "code": "OPS_MGR",
+    "permissions": [
+      "attendance:view:department",
+      "attendance:approve:department",
+      "employees:view:department",
+      "employees:manage:all",
+      "eod:view:department",
+      "reports:generate:department"
+    ],
+    "hasEmployeesView": true
+  }
+]

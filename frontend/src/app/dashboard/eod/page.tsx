@@ -51,14 +51,18 @@ export default function EodPage() {
   // Filter State
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
+  const [isRecursive, setIsRecursive] = useState<boolean>(false)
   const [selectedDate, setSelectedDate] = useState<string>("")
 
-  const { data: reports = [], isLoading, refetch } = useQuery<EodReport[]>({
-    queryKey: ["eod-reports", session?.user?.email, selectedDeptId, selectedEmployeeId],
+  const { data: reports = [], isLoading, isFetching, refetch } = useQuery<EodReport[]>({
+    queryKey: ["eod-reports", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = "/eod?"
       if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
-      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      if (selectedEmployeeId !== 'all') {
+        endpoint += `employeeId=${selectedEmployeeId}&`
+        if (isRecursive) endpoint += `recursive=true&`
+      }
       
       return await apiClient.get(endpoint)
     },
@@ -139,7 +143,11 @@ export default function EodPage() {
                   selectedDept={selectedDeptId}
                   setSelectedDept={setSelectedDeptId}
                   selectedEmp={selectedEmployeeId}
-                  setSelectedEmp={setSelectedEmployeeId}
+                  setSelectedEmp={(id, recursive) => {
+                      setSelectedEmployeeId(id);
+                      setIsRecursive(recursive);
+                  }}
+                  isRecursive={isRecursive}
                />
             )}
 
@@ -202,17 +210,27 @@ export default function EodPage() {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={isSubmitting}
+                    loading={isSubmitting}
                     className="flex-2 h-11 rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"
                   >
-                    {isSubmitting ? "Sending..." : "Submit Daily Report"}
+                    Submit Daily Report
                   </Button>
                 </div>
               </form>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className={`space-y-6 transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none relative' : ''}`}>
+             
+             {isFetching && !isLoading && (
+                <div className="absolute inset-0 z-50 flex items-start justify-center pt-24">
+                   <div className="bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-primary/20 flex items-center gap-2">
+                     <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                     <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Updating...</span>
+                   </div>
+                </div>
+              )}
+
             {filteredReports.length === 0 ? (
               <div className="py-24 text-center border-2 border-dashed border-border/40 rounded-3xl bg-muted/5">
                  <History className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />

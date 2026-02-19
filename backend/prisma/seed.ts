@@ -160,10 +160,12 @@ async function main() {
       // Employees
       { module: 'employees', action: 'view', scopeType: 'all' },
       { module: 'employees', action: 'view', scopeType: 'department' },
+      { module: 'employees', action: 'view', scopeType: 'team' },
       { module: 'employees', action: 'view', scopeType: 'own' },
       { module: 'employees', action: 'manage', scopeType: 'all' },
       { module: 'employees', action: 'edit', scopeType: 'all' },
       { module: 'employees', action: 'edit', scopeType: 'department' },
+      { module: 'employees', action: 'edit', scopeType: 'team' },
       { module: 'employees', action: 'edit', scopeType: 'own' },
       
       // Reports
@@ -177,135 +179,173 @@ async function main() {
     const uniquePermissions = Array.from(new Map(permissions.map(p => [`${p.module}-${p.action}-${p.scopeType}`, p])).values());
 
     console.log(`--- Seeding ${uniquePermissions.length} Unique Permissions ---`);
-    for (const perm of uniquePermissions) {
-      try {
-        await prisma.permission.upsert({
-          where: {
-            module_action_scopeType: {
-              module: perm.module,
-              action: perm.action,
-              scopeType: perm.scopeType,
-            },
-          },
-          update: {},
-          create: perm,
-        });
-      } catch (err) {
-        console.error(`❌ Failed to seed permission: ${perm.module}:${perm.action}:${perm.scopeType}`, err);
-        throw err;
-      }
-    }
+    await prisma.permission.createMany({
+      data: uniquePermissions,
+      skipDuplicates: true,
+    });
     console.log('✅ Permissions seeded');
 
-    // 4. Map Roles to Permissions (Strictly as per Matrix)
-    
-    // Helper to map role to permissions by module, action, and scope
-    const mapRolePerms = async (roleCode: string, perms: {module: string, action: string, scope: string}[]) => {
-      const role = await prisma.role.findUnique({ where: { code: roleCode } });
-      if (!role) return;
-      
-      for (const p of perms) {
-        const perm = await prisma.permission.findFirst({
-          where: { module: p.module, action: p.action, scopeType: p.scope }
-        });
-        if (perm) {
-          await prisma.rolePermission.upsert({
-            where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } },
-            update: {},
-            create: { roleId: role.id, permissionId: perm.id }
-          });
-        }
-      }
+    // 4. Map Roles to Permissions
+    console.log('--- Mapping Roles to Permissions ---');
+    const allFetchedPerms = await prisma.permission.findMany();
+    const rolePermMappings: { roleId: number; permissionId: number }[] = [];
+
+    const getPermId = (module: string, action: string, scope: string) => {
+      const p = allFetchedPerms.find(perm => perm.module === module && perm.action === action && perm.scopeType === scope);
+      return p?.id;
     };
 
-    // 1. ADMIN: All Access
-    const allPerms = await prisma.permission.findMany();
-    const adminRole = await prisma.role.findUnique({ where: { code: 'ADMIN' } });
-    if (adminRole) {
-      for (const p of allPerms) {
-        await prisma.rolePermission.upsert({
-          where: { roleId_permissionId: { roleId: adminRole.id, permissionId: p.id } },
-          update: {},
-          create: { roleId: adminRole.id, permissionId: p.id }
-        });
+    const rolesInDb = await prisma.role.findMany();
+
+    // Mapping logic
+    for (const role of rolesInDb) {
+      if (role.code === 'ADMIN') {
+        for (const p of allFetchedPerms) {
+          rolePermMappings.push({ roleId: role.id, permissionId: p.id });
+        }
+        continue;
+      }
+
+      const roleMappings: { module: string; action: string; scope: string }[] = [];
+
+      // HEAD_DEPT roles
+      if (['SALES_HEAD', 'PROD_HEAD', 'PROJ_HEAD', 'OPS_HEAD'].includes(role.code)) {
+        roleMappings.push(
+          { module: 'leads', action: 'view', scope: 'department' },
+          { module: 'leads', action: 'edit', scope: 'department' },
+          { module: 'leads', action: 'create', scope: 'all' },
+          { module: 'leads', action: 'assign', scope: 'all' },
+          { module: 'leads', action: 'delete', scope: 'all' },
+          { module: 'tasks', action: 'view', scope: 'department' },
+          { module: 'tasks', action: 'create', scope: 'all' },
+          { module: 'tasks', action: 'edit', scope: 'department' },
+          { module: 'tasks', action: 'delete', scope: 'all' },
+          { module: 'tasks', action: 'assign', scope: 'all' },
+          { module: 'projects', action: 'create', scope: 'all' },
+          { module: 'projects', action: 'view', scope: 'department' },
+          { module: 'projects', action: 'edit', scope: 'department' },
+          { module: 'projects', action: 'delete', scope: 'all' },
+          { module: 'products', action: 'view', scope: 'all' },
+          { module: 'products', action: 'edit', scope: 'all' },
+          { module: 'products', action: 'create', scope: 'all' },
+          { module: 'products', action: 'delete', scope: 'all' },
+          { module: 'eod', action: 'view', scope: 'department' },
+          { module: 'eod', action: 'create', scope: 'own' },
+          { module: 'attendance', action: 'view', scope: 'department' },
+          { module: 'attendance', action: 'create', scope: 'own' },
+          { module: 'attendance', action: 'approve', scope: 'department' },
+          { module: 'employees', action: 'view', scope: 'department' },
+          { module: 'employees', action: 'edit', scope: 'department' },
+          { module: 'reports', action: 'generate', scope: 'department' },
+        );
+      }
+
+      // SALES_BM
+      if (role.code === 'SALES_BM') {
+        roleMappings.push(
+          { module: 'leads', action: 'view', scope: 'team' },
+          { module: 'leads', action: 'edit', scope: 'team' },
+          { module: 'leads', action: 'create', scope: 'all' },
+          { module: 'leads', action: 'assign', scope: 'all' },
+          { module: 'tasks', action: 'view', scope: 'team' },
+          { module: 'tasks', action: 'create', scope: 'all' },
+          { module: 'tasks', action: 'edit', scope: 'team' },
+          { module: 'tasks', action: 'assign', scope: 'all' },
+          { module: 'eod', action: 'view', scope: 'team' },
+          { module: 'eod', action: 'create', scope: 'own' },
+          { module: 'attendance', action: 'view', scope: 'team' },
+          { module: 'attendance', action: 'create', scope: 'own' },
+          { module: 'reports', action: 'generate', scope: 'team' },
+          { module: 'employees', action: 'view', scope: 'team' },
+        );
+      }
+
+      // SALES_BDM
+      if (role.code === 'SALES_BDM') {
+        roleMappings.push(
+          { module: 'leads', action: 'view', scope: 'team' },
+          { module: 'leads', action: 'edit', scope: 'team' },
+          { module: 'leads', action: 'create', scope: 'all' },
+          { module: 'leads', action: 'assign', scope: 'all' },
+          { module: 'tasks', action: 'view', scope: 'team' },
+          { module: 'tasks', action: 'create', scope: 'all' },
+          { module: 'tasks', action: 'edit', scope: 'team' },
+          { module: 'tasks', action: 'assign', scope: 'all' },
+          { module: 'eod', action: 'view', scope: 'team' },
+          { module: 'eod', action: 'create', scope: 'own' },
+          { module: 'attendance', action: 'view', scope: 'team' },
+          { module: 'attendance', action: 'create', scope: 'own' },
+          { module: 'attendance', action: 'approve', scope: 'team' },
+          { module: 'reports', action: 'generate', scope: 'team' },
+          { module: 'employees', action: 'view', scope: 'team' },
+          { module: 'projects', action: 'view', scope: 'department' },
+        );
+      }
+
+      // PROD_PM / PROJ_PM (Project Managers)
+      if (['PROD_PM', 'PROJ_PM'].includes(role.code)) {
+        roleMappings.push(
+          { module: 'tasks', action: 'view', scope: 'department' },
+          { module: 'tasks', action: 'edit', scope: 'department' },
+          { module: 'tasks', action: 'create', scope: 'all' },
+          { module: 'projects', action: 'view', scope: 'department' },
+          { module: 'projects', action: 'edit', scope: 'department' },
+          { module: 'eod', action: 'view', scope: 'department' },
+          { module: 'attendance', action: 'view', scope: 'department' },
+          { module: 'employees', action: 'view', scope: 'department' },
+          { module: 'reports', action: 'generate', scope: 'department' },
+        );
+      }
+
+      // OPS_MGR (Operations Manager)
+      if (role.code === 'OPS_MGR') {
+        roleMappings.push(
+          { module: 'attendance', action: 'view', scope: 'department' },
+          { module: 'attendance', action: 'approve', scope: 'department' },
+          { module: 'employees', action: 'view', scope: 'department' },
+          { module: 'employees', action: 'manage', scope: 'all' },
+          { module: 'eod', action: 'view', scope: 'department' },
+          { module: 'reports', action: 'generate', scope: 'department' },
+        );
+      }
+
+      // Basic Employee Roles
+      if (['SALES_BDE', 'PROD_DEV', 'PROD_TEST', 'PROJ_DEV', 'PROJ_TEST'].includes(role.code)) {
+        roleMappings.push(
+          { module: 'leads', action: 'view', scope: 'own' },
+          { module: 'leads', action: 'edit', scope: 'own' },
+          { module: 'tasks', action: 'view', scope: 'own' },
+          { module: 'tasks', action: 'edit', scope: 'own' },
+          { module: 'eod', action: 'view', scope: 'own' },
+          { module: 'eod', action: 'create', scope: 'own' },
+          { module: 'attendance', action: 'view', scope: 'own' },
+          { module: 'attendance', action: 'create', scope: 'own' },
+          { module: 'employees', action: 'view', scope: 'own' },
+          { module: 'projects', action: 'view', scope: 'assigned' },
+          { module: 'reports', action: 'generate', scope: 'own' },
+        );
+      }
+
+      for (const m of roleMappings) {
+        const pId = getPermId(m.module, m.action, m.scope);
+        if (pId) {
+          rolePermMappings.push({ roleId: role.id, permissionId: pId });
+        }
       }
     }
 
-    // 2. HEAD_DEPT (Generic mapping for all Head of Dept roles)
-    const headDeptRoles = ['SALES_HEAD', 'PROD_HEAD', 'PROJ_HEAD', 'OPS_HEAD'];
-    for (const roleCode of headDeptRoles) {
-      await mapRolePerms(roleCode, [
-        { module: 'leads', action: 'view', scope: 'department' },
-        { module: 'leads', action: 'edit', scope: 'department' },
-        { module: 'leads', action: 'create', scope: 'all' },
-        { module: 'leads', action: 'assign', scope: 'all' },
-        { module: 'leads', action: 'delete', scope: 'all' },
-        { module: 'tasks', action: 'view', scope: 'department' },
-        { module: 'tasks', action: 'create', scope: 'all' },
-        { module: 'tasks', action: 'edit', scope: 'department' },
-        { module: 'tasks', action: 'delete', scope: 'all' },
-        { module: 'tasks', action: 'assign', scope: 'all' },
-        { module: 'projects', action: 'create', scope: 'all' },
-        { module: 'projects', action: 'view', scope: 'department' },
-        { module: 'projects', action: 'edit', scope: 'department' },
-        { module: 'projects', action: 'delete', scope: 'all' },
-        { module: 'products', action: 'view', scope: 'all' },
-        { module: 'products', action: 'edit', scope: 'all' },
-        { module: 'products', action: 'create', scope: 'all' },
-        { module: 'products', action: 'delete', scope: 'all' },
-        { module: 'eod', action: 'view', scope: 'department' },
-        { module: 'eod', action: 'create', scope: 'own' },
-        { module: 'attendance', action: 'view', scope: 'department' },
-        { module: 'attendance', action: 'create', scope: 'own' },
-        { module: 'attendance', action: 'approve', scope: 'department' },
-        { module: 'employees', action: 'view', scope: 'department' },
-        { module: 'employees', action: 'edit', scope: 'department' },
-        { module: 'reports', action: 'generate', scope: 'department' },
-      ]);
-    }
-
-    // 3. BM/PM/Other Roles (Example mappings)
-    await mapRolePerms('SALES_BM', [
-      { module: 'leads', action: 'view', scope: 'team' },
-      { module: 'leads', action: 'edit', scope: 'team' },
-      { module: 'leads', action: 'create', scope: 'all' },
-      { module: 'leads', action: 'assign', scope: 'all' },
-      { module: 'tasks', action: 'view', scope: 'team' },
-      { module: 'tasks', action: 'create', scope: 'all' },
-      { module: 'tasks', action: 'edit', scope: 'team' },
-      { module: 'tasks', action: 'assign', scope: 'all' },
-      { module: 'eod', action: 'view', scope: 'team' },
-      { module: 'attendance', action: 'view', scope: 'team' },
-      { module: 'reports', action: 'generate', scope: 'team' },
-    ]);
-
-    await mapRolePerms('PROD_PM', [
-      { module: 'tasks', action: 'view', scope: 'department' },
-      { module: 'tasks', action: 'edit', scope: 'department' },
-      { module: 'projects', action: 'view', scope: 'department' },
-      { module: 'projects', action: 'edit', scope: 'department' },
-      { module: 'eod', action: 'view', scope: 'department' },
-    ]);
-
-    // 4. Basic Employee Roles (Dev, BDE, etc.)
-    const basicEmployeeRoles = ['SALES_BDE', 'PROD_DEV', 'PROD_TEST', 'PROJ_DEV', 'PROJ_TEST'];
-    for (const roleCode of basicEmployeeRoles) {
-      await mapRolePerms(roleCode, [
-        { module: 'leads', action: 'view', scope: 'own' },
-        { module: 'leads', action: 'edit', scope: 'own' },
-        { module: 'tasks', action: 'view', scope: 'own' },
-        { module: 'tasks', action: 'edit', scope: 'own' },
-        { module: 'eod', action: 'create', scope: 'own' },
-        { module: 'attendance', action: 'create', scope: 'own' },
-      ]);
-    }
-
+    // Batch insert role permissions
+    await prisma.rolePermission.createMany({
+      data: rolePermMappings,
+      skipDuplicates: true,
+    });
     console.log('✅ Role mappings seeded');
 
     // 5. Create Super Admin User
     const adminEmail = 'superadmin@media-masala.com';
     const hashedPassword = await bcrypt.hash('Password@123', 10);
     const adminDept = await prisma.department.findUnique({ where: { code: 'ADMIN' } });
+    const adminRole = rolesInDb.find(r => r.code === 'ADMIN');
 
     if (adminRole && adminDept) {
       const adminUser = await prisma.user.upsert({
@@ -341,88 +381,164 @@ async function main() {
       });
       console.log('✅ Super Admin employee record created/updated');
 
-      // 6. Create Initial Employees for each Dept
-      const sampleStaff = [
-        { first: 'John', last: 'Sales', email: 'john.sales@media-masala.com', dept: 'SALES', role: 'SALES_HEAD' },
-        { first: 'Jane', last: 'BM', email: 'jane.bm@media-masala.com', dept: 'SALES', role: 'SALES_BM' },
-        { first: 'Alice', last: 'Product', email: 'alice.prod@media-masala.com', dept: 'PRODUCT', role: 'PROD_HEAD' },
-        { first: 'Dev', last: 'One', email: 'dev1@media-masala.com', dept: 'PRODUCT', role: 'PROD_DEV' },
-        { first: 'Bob', last: 'Project', email: 'bob.proj@media-masala.com', dept: 'PROJECT', role: 'PROJ_HEAD' },
-        { first: 'Charlie', last: 'Ops', email: 'charlie.ops@media-masala.com', dept: 'OPERATION', role: 'OPS_HEAD' },
-      ];
+      // 6. Create Sales Hierarchy (Orderly Construction)
+      console.log('--- Seeding Sales Hierarchy ---');
+      
+      const createStaff = async (
+        empId: string, firstName: string, lastName: string, 
+        email: string, roleCode: string, deptCode: string, managerId?: number
+      ) => {
+        const d = await prisma.department.findUnique({ where: { code: deptCode } });
+        const r = await prisma.role.findUnique({ where: { code: roleCode } });
+        if (!d || !r) throw new Error(`Missing Dept ${deptCode} or Role ${roleCode}`);
 
-      for (const s of sampleStaff) {
-        const d = await prisma.department.findUnique({ where: { code: s.dept } });
-        const r = await prisma.role.findUnique({ where: { code: s.role } });
-        if (d && r) {
-          const user = await prisma.user.upsert({
-            where: { email: s.email },
-            update: {},
-            create: {
-              email: s.email,
-              passwordHash: hashedPassword,
-              roleId: r.id,
-              departmentId: d.id,
-            }
-          });
-          await prisma.employee.upsert({
-            where: { email: s.email },
-            update: {},
-            create: {
-              empId: `EMP-${s.email.split('@')[0].toUpperCase()}`,
-              userId: user.id,
-              firstName: s.first,
-              lastName: s.last,
-              email: s.email,
-              departmentId: d.id,
-              roleId: r.id,
-            }
-          });
-        }
-      }
-      console.log('✅ Sample employees created');
+        const user = await prisma.user.upsert({
+          where: { email },
+          update: { passwordHash: hashedPassword, roleId: r.id, departmentId: d.id },
+          create: {
+            email,
+            passwordHash: hashedPassword,
+            roleId: r.id,
+            departmentId: d.id,
+          }
+        });
 
-      // 7. Create Sample Leads (Sales Flow)
-      console.log('--- Seeding Sample Leads ---');
-      const salesHead = await prisma.employee.findFirst({ where: { email: 'john.sales@media-masala.com' } });
+        const emp = await prisma.employee.upsert({
+          where: { email },
+          update: { 
+            firstName, lastName, roleId: r.id, departmentId: d.id, 
+            managerId: managerId ?? undefined 
+          },
+          create: {
+            empId,
+            userId: user.id,
+            firstName,
+            lastName,
+            email,
+            departmentId: d.id,
+            roleId: r.id,
+            managerId: managerId ?? undefined,
+          }
+        });
+        return emp;
+      };
+
+      // Level 1: HOD
+      const hod = await createStaff('EMP-HOD', 'Sales', 'HOD', 'sales.hod@test.com', 'SALES_HEAD', 'SALES');
+      // Level 2: BM
+      const bm = await createStaff('EMP-BM', 'Sales', 'BM', 'sales.bm@test.com', 'SALES_BM', 'SALES', hod.id);
+      // Level 3: BDMs
+      const bdm1 = await createStaff('EMP-BDM1', 'Sales', 'BDM-1', 'sales.bdm1@test.com', 'SALES_BDM', 'SALES', bm.id);
+      const bdm2 = await createStaff('EMP-BDM2', 'Sales', 'BDM-2', 'sales.bdm2@test.com', 'SALES_BDM', 'SALES', bm.id);
+      // Level 4: BDEs (Team 1)
+      const bde1a = await createStaff('EMP-BDE1A', 'Sales', 'BDE-1A', 'sales.bde1a@test.com', 'SALES_BDE', 'SALES', bdm1.id);
+      const bde1b = await createStaff('EMP-BDE1B', 'Sales', 'BDE-1B', 'sales.bde1b@test.com', 'SALES_BDE', 'SALES', bdm1.id);
+      const bde1c = await createStaff('EMP-BDE1C', 'Sales', 'BDE-1C', 'sales.bde1c@test.com', 'SALES_BDE', 'SALES', bdm1.id);
+      const bde1d = await createStaff('EMP-BDE1D', 'Sales', 'BDE-1D', 'sales.bde1d@test.com', 'SALES_BDE', 'SALES', bdm1.id);
+      // Level 4: BDEs (Team 2)
+      const bde2a = await createStaff('EMP-BDE2A', 'Sales', 'BDE-2A', 'sales.bde2a@test.com', 'SALES_BDE', 'SALES', bdm2.id);
+      const bde2b = await createStaff('EMP-BDE2B', 'Sales', 'BDE-2B', 'sales.bde2b@test.com', 'SALES_BDE', 'SALES', bdm2.id);
+      const bde2c = await createStaff('EMP-BDE2C', 'Sales', 'BDE-2C', 'sales.bde2c@test.com', 'SALES_BDE', 'SALES', bdm2.id);
+      const bde2d = await createStaff('EMP-BDE2D', 'Sales', 'BDE-2D', 'sales.bde2d@test.com', 'SALES_BDE', 'SALES', bdm2.id);
+
+      // Other Sample Staff
+      await createStaff('EMP-PROD1', 'Alice', 'Product', 'alice.prod@media-masala.com', 'PROD_HEAD', 'PRODUCT');
+      await createStaff('EMP-DEV1', 'Dev', 'One', 'dev1@media-masala.com', 'PROD_DEV', 'PRODUCT'); // Fixed: removed 0
+      await createStaff('EMP-PROJ1', 'Bob', 'Project', 'bob.proj@media-masala.com', 'PROJ_HEAD', 'PROJECT');
+      await createStaff('EMP-OPS1', 'Charlie', 'Ops', 'charlie.ops@media-masala.com', 'OPS_HEAD', 'OPERATION');
+
+      console.log('✅ Sales hierarchy and sample staff created');
+
+      // 7. Create Sample Leads (Detailed Hierarchy Leads)
+      console.log('--- Seeding 80 Sample Leads ---');
       const salesDept = await prisma.department.findUnique({ where: { code: 'SALES' } });
-      if (salesHead && salesDept) {
-        const leadData = [
-          { name: 'Acme Corp', email: 'contact@acme.com', phone: '1234567890', company: 'Acme Corp', source: 'Website' as any, status: 'New' as any },
-          { name: 'Globex', email: 'info@globex.com', phone: '0987654321', company: 'Globex Inc', source: 'Referral' as any, status: 'Prospect' as any },
+      if (salesDept) {
+        const bdes = [
+          { emp: bde1a, tag: 'BDE1A' }, { emp: bde1b, tag: 'BDE1B' },
+          { emp: bde1c, tag: 'BDE1C' }, { emp: bde1d, tag: 'BDE1D' },
+          { emp: bde2a, tag: 'BDE2A' }, { emp: bde2b, tag: 'BDE2B' },
+          { emp: bde2c, tag: 'BDE2C' }, { emp: bde2d, tag: 'BDE2D' }
         ];
-        for (const l of leadData) {
-          const existingLead = await prisma.lead.findFirst({ where: { email: l.email } });
-          if (!existingLead) {
-            await prisma.lead.create({
-              data: {
-                ...l,
-                ownerId: salesHead.id,
-                departmentId: salesDept.id
-              }
+
+        const sources = ['Website', 'Referral', 'Cold_Call', 'Email'];
+        const statuses = ['New', 'Follow_Up', 'Prospect', 'Hot_Prospect', 'Proposal_Sent', 'Closing'];
+
+        const leadData: any[] = [];
+        for (const bde of bdes) {
+          for (let i = 1; i <= 10; i++) {
+            const leadName = `Lead-${bde.tag}-${i}`;
+            const leadEmail = `${leadName.toLowerCase().replace(/ /g, '')}@example.com`;
+            leadData.push({
+              name: leadName,
+              email: leadEmail,
+              phone: `99${Math.floor(10000000 + Math.random() * 90000000)}`,
+              company: `Company ${bde.tag}-${i}`,
+              source: sources[i % sources.length],
+              status: statuses[i % statuses.length],
+              ownerId: bde.emp.id,
+              departmentId: salesDept.id,
+              notes: `Test lead owned by ${bde.tag}`
             });
           }
         }
-        console.log('✅ Sample leads created/verified');
+
+        await prisma.lead.createMany({
+          data: leadData,
+          skipDuplicates: true
+        });
+        console.log('✅ 80 Sample leads created/verified');
       }
 
-      // 8. Create Sample Tasks
+      // 8. Create Sample Products
+      console.log('--- Seeding Sample Products ---');
+      const productData = [
+        { name: 'Standard Website', description: 'Responsive corporate website with up to 5 pages.', category: 'Web Development' },
+        { name: 'E-commerce Portal', description: 'Full-featured online store with payment integration.', category: 'Web Development' },
+        { name: 'Mobile App Foundation', description: 'Base structure for iOS and Android mobile applications.', category: 'Mobile Apps' },
+      ];
+      for (const p of productData) {
+        await prisma.product.upsert({
+          where: { name: p.name },
+          update: { description: p.description, category: p.category },
+          create: p
+        });
+      }
+      console.log('✅ Sample products created/verified');
+
+      // 9. Create Sample Projects
+      console.log('--- Seeding Sample Projects ---');
+      const projectData = [
+        { name: 'Acme Website Redesign', description: 'Modernizing the corporate identity for Acme Corp.', status: 'Active' },
+        { name: 'Globex Mobile App', description: 'Developing a new consumer application for Globex Inc.', status: 'Planning' },
+      ];
+      for (const pr of projectData) {
+        const exists = await prisma.project.findFirst({ where: { name: pr.name } });
+        if (!exists) {
+            await prisma.project.create({
+                data: pr
+            });
+        }
+      }
+      console.log('✅ Sample projects created/verified');
+
+      // 10. Create Sample Tasks
       console.log('--- Seeding Sample Tasks ---');
       const dev1 = await prisma.employee.findFirst({ where: { email: 'dev1@media-masala.com' } });
       if (dev1) {
-        const existingTask = await prisma.task.findFirst({ where: { title: 'Initial Product Setup' } });
-        if (!existingTask) {
-          await prisma.task.create({
-            data: {
-              title: 'Initial Product Setup',
-              description: 'Set up the basic product catalog features.',
-              dueDate: new Date(Date.now() + 86400000 * 7),
-              priority: 'High',
-              status: 'Pending',
-              assigneeId: dev1.id,
-              creatorId: dev1.id
-            }
-          });
+        const taskTitle = 'Initial Product Setup';
+        const exists = await prisma.task.findFirst({ where: { title: taskTitle } });
+        if (!exists) {
+            await prisma.task.create({
+              data: {
+                title: taskTitle,
+                description: 'Set up the basic product catalog features.',
+                dueDate: new Date(Date.now() + 86400000 * 7),
+                priority: 'High',
+                status: 'Pending',
+                assigneeId: dev1.id,
+                creatorId: dev1.id
+              }
+            });
         }
         console.log('✅ Sample tasks created/verified');
       }

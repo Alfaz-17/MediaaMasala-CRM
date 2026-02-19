@@ -1,3 +1,5 @@
+"use client"
+
 import { useSession } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
@@ -5,7 +7,7 @@ import { useCallback, useMemo } from "react"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
 
 export function usePermissions() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const user = session?.user as any
   const accessToken = user?.accessToken
 
@@ -48,10 +50,9 @@ export function usePermissions() {
     hasModule,
     role,
     isAdmin: role === 'ADMIN',
-    isUnassigned: role === 'UNASSIGNED',
     refreshPermissions: refetch,
     permissions,
-    isLoading
-  }), [hasPermission, hasModule, role, refetch, permissions, isLoading])
+    isLoading: status === "loading" || isLoading
+  }), [hasPermission, hasModule, role, refetch, permissions, isLoading, status])
 }
 

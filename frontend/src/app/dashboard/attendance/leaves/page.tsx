@@ -1,3 +1,5 @@
+"use client"
+
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -52,13 +54,17 @@ export default function LeavesPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
+  const [isRecursive, setIsRecursive] = useState<boolean>(false)
 
   const { data: leaves = [], isLoading, refetch } = useQuery<LeaveRequest[]>({
-    queryKey: ["leaves", session?.user?.email, selectedDeptId, selectedEmployeeId],
+    queryKey: ["leaves", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = "/leaves?"
       if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
-      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      if (selectedEmployeeId !== 'all') {
+          endpoint += `employeeId=${selectedEmployeeId}&`
+          if (isRecursive) endpoint += `recursive=true&`
+      }
       return await apiClient.get(endpoint)
     },
     enabled: status === "authenticated",
@@ -143,7 +149,11 @@ export default function LeavesPage() {
               selectedDept={selectedDeptId}
               setSelectedDept={setSelectedDeptId}
               selectedEmp={selectedEmployeeId}
-              setSelectedEmp={setSelectedEmployeeId}
+              setSelectedEmp={(id, recursive) => {
+                  setSelectedEmployeeId(id);
+                  setIsRecursive(recursive);
+              }}
+              isRecursive={isRecursive}
             />
 
             <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>

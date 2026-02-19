@@ -63,7 +63,7 @@ async function main() {
     { module: 'attendance', action: 'create', scope: 'own' },
     { module: 'attendance', action: 'approve', scope: 'team' },
     { module: 'reports', action: 'generate', scope: 'team' },
-    { module: 'employees', action: 'view', scope: 'department' },
+    { module: 'employees', action: 'view', scope: 'team' },
     { module: 'projects', action: 'view', scope: 'department' },
   ];
 
@@ -72,6 +72,21 @@ async function main() {
       where: { module: p.module, action: p.action, scopeType: p.scope }
     });
     if (perm) {
+      // Cleanup conflicting permissions
+      const currentRolePerms = await prisma.rolePermission.findMany({
+        where: { roleId: roleBDM.id, permission: { module: p.module, action: p.action } },
+        include: { permission: true }
+      });
+
+      for (const crp of currentRolePerms) {
+        if (crp.permission.scopeType !== p.scope) {
+             console.log(`   Removing old ${p.module}:${p.action}:${crp.permission.scopeType} for BDM`);
+             await prisma.rolePermission.delete({
+                 where: { roleId_permissionId: { roleId: roleBDM.id, permissionId: crp.permissionId } }
+             });
+        }
+      }
+
       await prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: roleBDM.id, permissionId: perm.id } },
         update: {},
@@ -80,6 +95,52 @@ async function main() {
     }
   }
   console.log('✅ BDM permissions mapped');
+
+  // 2.1 Update BM permissions (Enforce Team Scope for Employees)
+  const bmPerms = [
+    { module: 'employees', action: 'view', scope: 'team' },
+    { module: 'eod', action: 'view', scope: 'team' }, 
+    { module: 'eod', action: 'create', scope: 'own' },
+    { module: 'attendance', action: 'view', scope: 'team' },
+    { module: 'attendance', action: 'create', scope: 'own' },
+  ];
+
+  for (const p of bmPerms) {
+    const perm = await prisma.permission.findFirst({
+      where: { module: p.module, action: p.action, scopeType: p.scope }
+    });
+    if (perm) {
+      // Remove conflicting permissions first (like department scope)
+      const existingPerms = await prisma.permission.findMany({
+        where: { module: p.module, action: p.action } 
+      });
+      
+      // We want to remove any permission for this module/action that IS NOT the target scope
+      // But upsert only handles one ID. 
+      // Strategy: Find current permission for role+module+action and delete it if it's different scope
+      
+      const currentRolePerms = await prisma.rolePermission.findMany({
+        where: { roleId: roleBM.id, permission: { module: p.module, action: p.action } },
+        include: { permission: true }
+      });
+
+      for (const crp of currentRolePerms) {
+        if (crp.permission.scopeType !== p.scope) {
+             console.log(`   Removing old ${p.module}:${p.action}:${crp.permission.scopeType} for BM`);
+             await prisma.rolePermission.delete({
+                 where: { roleId_permissionId: { roleId: roleBM.id, permissionId: crp.permissionId } }
+             });
+        }
+      }
+
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: roleBM.id, permissionId: perm.id } },
+        update: {},
+        create: { roleId: roleBM.id, permissionId: perm.id }
+      });
+    }
+  }
+  console.log('✅ BM permissions updated (forced Team scope)');
 
   // Also ensure BDE has view permissions for attendance, eod, employees (own scope)
   const bdeExtraPerms = [

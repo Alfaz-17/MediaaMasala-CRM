@@ -5,11 +5,14 @@ import { apiClient } from "@/lib/api-client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Users, LayoutGrid } from "lucide-react"
 
+import { HierarchySelector } from "@/components/dashboard/hierarchy-selector"
+
 interface ManagementFiltersProps {
   selectedDept: string
   setSelectedDept: (id: string) => void
   selectedEmp: string
-  setSelectedEmp: (id: string) => void
+  setSelectedEmp: (id: string, recursive: boolean) => void
+  isRecursive: boolean
   module: string
 }
 
@@ -18,9 +21,10 @@ export function ManagementFilters({
   setSelectedDept, 
   selectedEmp, 
   setSelectedEmp,
+  isRecursive,
   module
 }: ManagementFiltersProps) {
-  const { permissions, role } = usePermissions()
+  const { role, permissions } = usePermissions()
   
   // Find current module scope
   const modulePerm = permissions.find((p: any) => p.module === module && p.action === 'view')
@@ -36,13 +40,6 @@ export function ManagementFilters({
     enabled: isAdmin
   })
 
-  // Fetch employees - Using the regular /admin/employees endpoint which is already scoped by the backend
-  const { data: employees = [] } = useQuery({
-    queryKey: ["filter-employees", selectedDept],
-    queryFn: () => apiClient.get(`/admin/employees${selectedDept !== 'all' ? `?departmentId=${selectedDept}` : ''}`),
-    enabled: isManager
-  })
-
   if (!isManager) return null
 
   return (
@@ -54,7 +51,7 @@ export function ManagementFilters({
             value={selectedDept}
             onChange={(e) => { 
                 setSelectedDept(e.target.value); 
-                setSelectedEmp("all"); 
+                setSelectedEmp("all", false); 
             }}
             className="flex h-9 w-full rounded-lg border border-border/40 bg-card pl-8 pr-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm transition-all hover:border-primary/30"
           >
@@ -67,20 +64,11 @@ export function ManagementFilters({
         </div>
       )}
 
-      <div className="relative min-w-[160px]">
-        <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 h-3.5 w-3.5" />
-        <select
-          value={selectedEmp}
-          onChange={(e) => setSelectedEmp(e.target.value)}
-          className="flex h-9 w-full rounded-lg border border-border/40 bg-card pl-8 pr-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer shadow-sm transition-all hover:border-primary/30"
-        >
-          <option value="all">All Employees</option>
-          {Array.isArray(employees) && employees.map((e: any) => (
-            <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.department?.name || 'N/A'})</option>
-          ))}
-        </select>
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 text-[8px]">▼</div>
-      </div>
+      <HierarchySelector 
+        selectedId={selectedEmp}
+        onSelect={setSelectedEmp}
+        isRecursive={isRecursive}
+      />
     </div>
   )
 }

@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
@@ -30,13 +32,17 @@ export default function ProjectsPage() {
   // Filter State
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
+  const [isRecursive, setIsRecursive] = useState<boolean>(false)
 
-  const { data: projects = [], isLoading } = useQuery<Project[]>({
-    queryKey: ["projects", session?.user?.email, selectedDeptId, selectedEmployeeId],
+  const { data: projects = [], isLoading, isFetching } = useQuery<Project[]>({
+    queryKey: ["projects", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = "/projects?"
       if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
-      if (selectedEmployeeId !== 'all') endpoint += `employeeId=${selectedEmployeeId}&`
+      if (selectedEmployeeId !== 'all') {
+          endpoint += `employeeId=${selectedEmployeeId}&`
+          if (isRecursive) endpoint += `recursive=true&`
+      }
       return await apiClient.get(endpoint)
     },
     enabled: status === "authenticated",
@@ -61,7 +67,11 @@ export default function ProjectsPage() {
                 selectedDept={selectedDeptId}
                 setSelectedDept={setSelectedDeptId}
                 selectedEmp={selectedEmployeeId}
-                setSelectedEmp={setSelectedEmployeeId}
+                setSelectedEmp={(id, recursive) => {
+                    setSelectedEmployeeId(id);
+                    setIsRecursive(recursive);
+                }}
+                isRecursive={isRecursive}
              />
           </div>
         </div>
@@ -81,7 +91,17 @@ export default function ProjectsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none relative' : ''}`}>
+             
+             {isFetching && !isLoading && (
+                <div className="absolute inset-0 z-50 flex items-start justify-center pt-24">
+                   <div className="bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-primary/20 flex items-center gap-2">
+                     <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                     <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Updating...</span>
+                   </div>
+                </div>
+              )}
+
             {projects.map((project) => (
               <Card key={project.id} className="group hover:border-primary/40 transition-all cursor-pointer overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm" onClick={() => router.push(`/dashboard/projects/${project.id}`)}>
                 <CardHeader className="p-5 pb-3">

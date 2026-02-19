@@ -12,6 +12,8 @@ declare module "next-auth" {
         action: string;
         scope: string;
       }>;
+      employeeId?: number;
+      employee?: any;
     } & DefaultSession["user"];
   }
 
@@ -23,6 +25,8 @@ declare module "next-auth" {
       action: string;
       scope: string;
     }>;
+    employeeId?: number;
+    employee?: any;
   }
 }
 
@@ -35,5 +39,7 @@ declare module "next-auth/jwt" {
       action: string;
       scope: string;
     }>;
+    employeeId?: number;
+    employee?: any;
   }
 }

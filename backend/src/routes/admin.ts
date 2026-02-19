@@ -4,6 +4,7 @@ import {
   getRoles, createRole, updateRole,
   getAllPermissions, getRolePermissions, syncRolePermissions,
   getEmployees, createEmployee, updateEmployee, getPendingUsers,
+  getHierarchy,
   getPermissionMatrix
 } from '../controllers/adminController';
 import { authenticateToken, checkPermission } from '../middleware/auth';
@@ -17,6 +18,7 @@ router.use(authenticateToken);
 
 // Employees
 router.get('/employees', checkPermission('employees', 'view'), getEmployees);
+router.get('/hierarchy-tree', checkPermission('employees', 'view'), getHierarchy);
 router.get('/pending-users', checkPermission('employees', 'manage'), getPendingUsers);
 router.post('/employees', checkPermission('employees', 'manage'), createEmployee);
 router.patch('/employees/:id', checkPermission('employees', 'edit'), updateEmployee);

@@ -144,15 +144,19 @@ export default function TasksPage() {
   const { hasPermission, isLoading: permissionsLoading } = usePermissions()
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
+  const [isRecursive, setIsRecursive] = useState<boolean>(false)
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [selectedPriority, setSelectedPriority] = useState<string>("all")
 
-  const { data: tasks = [], isLoading, error: queryError } = useQuery<Task[]>({
-    queryKey: ["tasks", activeTab, session?.user?.email, selectedDeptId, selectedEmployeeId],
+  const { data: tasks = [], isLoading, isFetching, error: queryError } = useQuery<Task[]>({
+    queryKey: ["tasks", activeTab, session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = activeTab === 'my' ? "/tasks?filter=my&" : "/tasks?"
       if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
-      if (selectedEmployeeId !== 'all') endpoint += `assigneeId=${selectedEmployeeId}&`
+      if (selectedEmployeeId !== 'all') {
+        endpoint += `assigneeId=${selectedEmployeeId}&`
+        if (isRecursive) endpoint += `recursive=true&`
+      }
       
       const data = await apiClient.get(endpoint)
       return Array.isArray(data) ? data : (data.tasks || [])
@@ -253,7 +257,11 @@ export default function TasksPage() {
                 selectedDept={selectedDeptId}
                 setSelectedDept={setSelectedDeptId}
                 selectedEmp={selectedEmployeeId}
-                setSelectedEmp={setSelectedEmployeeId}
+                setSelectedEmp={(id, recursive) => {
+                    setSelectedEmployeeId(id);
+                    setIsRecursive(recursive);
+                }}
+                isRecursive={isRecursive}
             />
 
             {/* Status Filter */}
@@ -301,7 +309,7 @@ export default function TasksPage() {
           <div className="flex items-center gap-2">
             <ViewToggle view={view} onViewChange={setView} />
             <div className="h-4 w-px bg-border/40 mx-1" />
-            <Button variant="ghost" size="sm" className="h-9 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setSelectedStatus("all"); setSelectedPriority("all")}}>
+            <Button variant="ghost" size="sm" className="h-9 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setIsRecursive(false); setSelectedStatus("all"); setSelectedPriority("all")}}>
               Reset
             </Button>
           </div>
@@ -312,6 +320,17 @@ export default function TasksPage() {
             Error: {(queryError as any).message || "Failed to fetch tasks"}
           </div>
         )}
+
+        {/* Loading Overlay */}
+        <div className={`transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none relative' : ''}`}>
+          {isFetching && !isLoading && (
+            <div className="absolute inset-0 z-50 flex items-start justify-center pt-24">
+               <div className="bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-primary/20 flex items-center gap-2">
+                 <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Updating...</span>
+               </div>
+            </div>
+          )}
 
         {/* Main Content Area */}
         {filteredTasks.length > 0 ? (
@@ -494,6 +513,7 @@ export default function TasksPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </PermissionGuard>
   )

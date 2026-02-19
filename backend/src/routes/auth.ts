@@ -66,6 +66,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         employeeId: employee?.id,
+        employee: employee,
         email: user.email,
         name: user.email.split('@')[0], // Simplified name for now
         role: user.role.code,

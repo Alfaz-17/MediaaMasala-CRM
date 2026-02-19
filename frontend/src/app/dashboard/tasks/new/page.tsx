@@ -13,6 +13,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
 import { Briefcase, Package, ShoppingBag, ArrowRight, User } from "lucide-react"
+import { toast } from "sonner"
 
 const PRIORITIES = ["High", "Medium", "Low"]
 
@@ -104,8 +105,10 @@ function NewTaskContent() {
         assigneeId: formData.assigneeId ? parseInt(formData.assigneeId) : undefined
       })
       router.push("/dashboard/tasks")
+      toast.success("Task created successfully")
     } catch (err: any) {
       setError(err.message || "Failed to create task")
+      toast.error(err.message || "Failed to create task")
     } finally {
       setLoading(false)
     }
@@ -313,10 +316,10 @@ function NewTaskContent() {
               </Link>
               <Button 
                 type="submit" 
-                disabled={loading}
+                loading={loading}
                 className="h-12 px-10 rounded-xl text-[11px] font-black shadow-2xl shadow-primary/20 uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
-                {loading ? "Creating..." : "Create Task"}
+                Create Task
               </Button>
           </CardFooter>
         </form>

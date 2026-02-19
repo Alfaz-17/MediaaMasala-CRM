@@ -135,6 +135,9 @@ model Employee {
   updatedAt   DateTime  @updatedAt
 
   @@index([managerId])
+  @@index([departmentId])
+  @@index([roleId])
+  @@index([isActive])
   @@map("employees")
 }
 
@@ -190,6 +193,7 @@ model Lead {
   @@index([departmentId])
   @@index([status])
   @@index([source])
+  @@index([createdAt])
   @@map("leads")
 }
 
@@ -229,6 +233,7 @@ model Task {
   @@index([productId])
   @@index([status])
   @@index([priority])
+  @@index([dueDate])
   @@map("tasks")
 }
 
@@ -291,6 +296,8 @@ model FollowUpLog {
 
   @@index([leadId])
   @@index([employeeId])
+  @@index([scheduledDate])
+  @@index([completedDate])
   @@map("follow_up_logs")
 }
 
@@ -349,6 +356,7 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([status])
   @@map("projects")
 }
 
@@ -370,6 +378,7 @@ model Attendance {
 
   @@index([employeeId])
   @@index([date])
+  @@index([status])
   @@map("attendance")
 }
 
@@ -393,6 +402,8 @@ model LeaveRequest {
 
   @@index([employeeId])
   @@index([status])
+  @@index([startDate])
+  @@index([endDate])
   @@map("leave_requests")
 }
 

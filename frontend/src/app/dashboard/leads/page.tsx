@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
 import { 
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/card"
 import { usePermissions } from "@/hooks/use-permissions"
 import { PermissionGuard } from "@/components/permission-guard"
+import { ManagementFilters } from "@/components/dashboard/management-filters"
 
 interface Lead {
   id: string
@@ -114,8 +116,6 @@ function LeadsSkeleton({ view }: { view: ViewType }) {
   )
 }
 
-import { ManagementFilters } from "@/components/dashboard/management-filters"
-
 export default function LeadsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -124,14 +124,18 @@ export default function LeadsPage() {
   const { hasPermission, isLoading: permissionsLoading } = usePermissions()
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
+  const [isRecursive, setIsRecursive] = useState<boolean>(false)
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
 
-  const { data: leads = [], isLoading, error: queryError } = useQuery<Lead[]>({
-    queryKey: ["leads", session?.user?.email, selectedDeptId, selectedEmployeeId],
+  const { data: leads = [], isLoading, isFetching, error: queryError } = useQuery<Lead[]>({
+    queryKey: ["leads", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = "/leads?"
       if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
-      if (selectedEmployeeId !== 'all') endpoint += `ownerId=${selectedEmployeeId}&`
+      if (selectedEmployeeId !== 'all') {
+        endpoint += `ownerId=${selectedEmployeeId}&`
+        if (isRecursive) endpoint += `recursive=true&`
+      }
       
       const data = await apiClient.get(endpoint)
       return Array.isArray(data) ? data : (data.leads || [])
@@ -149,14 +153,19 @@ export default function LeadsPage() {
     }
   }, [status, router])
 
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete lead: ${name}?`)) return
     
+    setDeletingId(id)
     try {
       await apiClient.delete(`/leads/${id}`)
       router.refresh()
     } catch (err: any) {
-      alert(err.message || "Deletion failed")
+      toast.error(err.message || "Deletion failed")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -234,7 +243,11 @@ export default function LeadsPage() {
                 selectedDept={selectedDeptId}
                 setSelectedDept={setSelectedDeptId}
                 selectedEmp={selectedEmployeeId}
-                setSelectedEmp={setSelectedEmployeeId}
+                setSelectedEmp={(id, recursive) => {
+                    setSelectedEmployeeId(id);
+                    setIsRecursive(recursive);
+                }}
+                isRecursive={isRecursive}
              />
             
             <div className="relative flex-1 group min-w-[200px]">
@@ -251,7 +264,7 @@ export default function LeadsPage() {
           <div className="flex items-center gap-2">
             <ViewToggle view={view} onViewChange={setView} />
             <div className="h-4 w-px bg-border/40 mx-1" />
-            <Button variant="ghost" size="sm" className="h-9 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setSelectedStatus("all")}}>
+            <Button variant="ghost" size="sm" className="h-9 px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => {setSearchQuery(""); setSelectedEmployeeId("all"); setIsRecursive(false); setSelectedStatus("all")}}>
               Reset
             </Button>
           </div>
@@ -263,6 +276,17 @@ export default function LeadsPage() {
             Error: {(queryError as any).message || "Failed to fetch leads"}
           </div>
         )}
+
+        {/* Loading Overlay */}
+        <div className={`transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none relative' : ''}`}>
+          {isFetching && !isLoading && (
+            <div className="absolute inset-0 z-50 flex items-start justify-center pt-24">
+               <div className="bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-primary/20 flex items-center gap-2">
+                 <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Updating...</span>
+               </div>
+            </div>
+          )}
 
         {/* Main Content Area */}
         {filteredLeads.length > 0 ? (
@@ -320,6 +344,7 @@ export default function LeadsPage() {
                                 size="sm" 
                                 className="h-7 text-[10px] font-bold uppercase tracking-widest px-2.5 text-destructive/60 hover:text-destructive hover:bg-destructive/5 rounded-md"
                                 onClick={() => handleDelete(lead.id, lead.name)}
+                                loading={deletingId === lead.id}
                               >
                                 Remove
                               </Button>
@@ -413,6 +438,7 @@ export default function LeadsPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </PermissionGuard>
   )

@@ -21,8 +21,10 @@ export const getLeads = async (req: Request, res: Response) => {
   const scope = (req as any).permissionScope;
 
   try {
-    const { departmentId, ownerId } = req.query;
+    const { departmentId, ownerId, recursive } = req.query;
     let whereClause: any = {};
+
+    const isRecursive = recursive === 'true';
 
     if (scope === 'own') {
       whereClause.ownerId = user.employeeId;
@@ -47,18 +49,37 @@ export const getLeads = async (req: Request, res: Response) => {
 
     if (ownerId) {
       const targetOwnerId = Number(ownerId);
+      
       if (scope === 'all') {
-        whereClause.ownerId = targetOwnerId;
+        if (isRecursive) {
+          const reporteeIds = await getRecursiveReporteeIds(targetOwnerId);
+          whereClause.ownerId = { in: [targetOwnerId, ...reporteeIds] };
+        } else {
+          whereClause.ownerId = targetOwnerId;
+        }
       } else if (scope === 'department') {
         const ownerEmp = await prisma.employee.findUnique({ where: { id: targetOwnerId } });
         if (ownerEmp && ownerEmp.departmentId === user.departmentId) {
-          whereClause.ownerId = targetOwnerId;
+          if (isRecursive) {
+            const reporteeIds = await getRecursiveReporteeIds(targetOwnerId);
+            whereClause.ownerId = { in: [targetOwnerId, ...reporteeIds] };
+          } else {
+            whereClause.ownerId = targetOwnerId;
+          }
         }
       } else if (scope === 'team') {
-        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-        const teamIds = [user.employeeId, ...reporteeIds];
+        const myReporteeIds = await getRecursiveReporteeIds(user.employeeId);
+        const teamIds = [user.employeeId, ...myReporteeIds];
+        
         if (teamIds.includes(targetOwnerId)) {
-          whereClause.ownerId = targetOwnerId;
+          if (isRecursive) {
+            const itsReporteeIds = await getRecursiveReporteeIds(targetOwnerId);
+            // Filter itsReporteeIds to ensure they are also within MY team scope (safety)
+            const allowedReporteeIds = itsReporteeIds.filter(id => teamIds.includes(id));
+            whereClause.ownerId = { in: [targetOwnerId, ...allowedReporteeIds] };
+          } else {
+            whereClause.ownerId = targetOwnerId;
+          }
         }
       }
     }

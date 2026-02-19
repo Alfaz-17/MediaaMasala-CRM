@@ -73,24 +73,45 @@ export const getTasks = async (req: Request, res: Response) => {
 
     if (assigneeId) {
       const targetAssigneeId = Number(assigneeId);
+      const isRecursive = req.query.recursive === 'true';
       let isAllowed = false;
+      let targetIds: number[] = [targetAssigneeId];
 
       if (scope === 'all') {
         isAllowed = true;
+        if (isRecursive) {
+          const reporteeIds = await getRecursiveReporteeIds(targetAssigneeId);
+          targetIds = [targetAssigneeId, ...reporteeIds];
+        }
       } else if (scope === 'department') {
         const emp = await prisma.employee.findUnique({ where: { id: targetAssigneeId } });
-        isAllowed = (emp?.departmentId === user.departmentId);
+        if (emp?.departmentId === user.departmentId) {
+          isAllowed = true;
+          if (isRecursive) {
+            const reporteeIds = await getRecursiveReporteeIds(targetAssigneeId);
+            targetIds = [targetAssigneeId, ...reporteeIds];
+          }
+        }
       } else if (scope === 'team') {
-        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-        const teamIds = [user.employeeId, ...reporteeIds];
-        isAllowed = teamIds.includes(targetAssigneeId);
+        const myReporteeIds = await getRecursiveReporteeIds(user.employeeId);
+        const teamIds = [user.employeeId, ...myReporteeIds];
+        
+        if (teamIds.includes(targetAssigneeId)) {
+          isAllowed = true;
+          if (isRecursive) {
+            const itsReporteeIds = await getRecursiveReporteeIds(targetAssigneeId);
+            // Filter to ensure they are within MY team scope
+            const allowedReporteeIds = itsReporteeIds.filter(id => teamIds.includes(id));
+            targetIds = [targetAssigneeId, ...allowedReporteeIds];
+          }
+        }
       } else if (scope === 'own') {
         isAllowed = (targetAssigneeId === user.employeeId);
       }
 
       if (isAllowed) {
-        whereClause.assigneeId = targetAssigneeId;
-        delete whereClause.OR; // Narrow down to specific assignee
+        whereClause.assigneeId = targetIds.length > 1 ? { in: targetIds } : targetAssigneeId;
+        delete whereClause.OR; // Narrow down to specific assignee(s)
       }
     }
 

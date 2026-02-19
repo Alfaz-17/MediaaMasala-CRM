@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/api-client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Clock, Calendar, Building, CheckCircle2, ShoppingBag, Briefcase, Package } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 interface Task {
   id: string
@@ -63,6 +64,7 @@ export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const { hasPermission } = usePermissions()
 
   const canEdit = hasPermission("tasks", "edit")
@@ -102,8 +104,10 @@ export default function TaskDetailPage() {
     try {
       await apiClient.patch(`/tasks/${id}`, { status: newStatus })
       setTask(prev => prev ? { ...prev, status: newStatus } : null)
+      toast.success(`Task marked as ${newStatus}`)
     } catch (err) {
       console.error("Error updating status:", err)
+      toast.error("Failed to update status")
     } finally {
       setUpdating(false)
     }
@@ -134,11 +138,15 @@ export default function TaskDetailPage() {
   const handleDeleteTask = async () => {
     if (!confirm("Are you sure you want to delete this task?")) return
     
+    setDeleting(true)
     try {
       await apiClient.delete(`/tasks/${id}`)
+      toast.success("Task deleted successfully")
       router.push("/dashboard/tasks")
     } catch (err) {
       console.error("Error deleting task:", err)
+      toast.error("Failed to delete task")
+      setDeleting(false)
     }
   }
 
@@ -174,15 +182,20 @@ export default function TaskDetailPage() {
                Edit Task
              </Button>
            )}
-           {canDelete && (
-             <Button variant="ghost" className="rounded-lg font-semibold text-xs h-9 px-4 text-destructive" onClick={handleDeleteTask}>
-               Delete Task
-             </Button>
-           )}
+            {canDelete && (
+              <Button 
+                variant="ghost" 
+                className="rounded-lg font-semibold text-xs h-9 px-4 text-destructive hover:bg-destructive/10" 
+                onClick={handleDeleteTask}
+                loading={deleting}
+              >
+                Delete Task
+              </Button>
+            )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:col-span-4 gap-6">
         {/* Main Briefing */}
         <div className="lg:col-span-3 space-y-6">
            <Card className="bg-card border-border/40 rounded-xl shadow-xs overflow-hidden">

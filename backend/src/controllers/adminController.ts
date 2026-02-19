@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcrypt';
-import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getRecursiveReporteeIds, getEmployeeHierarchy } from '../utils/userUtils';
 
 const employeeSelect = {
   id: true,
@@ -51,6 +51,29 @@ export const getEmployees = async (req: Request, res: Response) => {
     res.json(employees);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching employees' });
+  }
+};
+
+export const getHierarchy = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
+  try {
+    let rootId: number | null = null;
+
+    if (scope === 'own') {
+      rootId = user.employeeId;
+    } else if (scope === 'department' || scope === 'team') {
+      rootId = user.employeeId;
+    } else if (scope === 'all') {
+      rootId = null; // Admin sees all
+    }
+
+    const hierarchy = await getEmployeeHierarchy(rootId);
+    res.json(hierarchy);
+  } catch (error) {
+    console.error("Hierarchy fetch error:", error);
+    res.status(500).json({ message: 'Error fetching employee hierarchy' });
   }
 };
 

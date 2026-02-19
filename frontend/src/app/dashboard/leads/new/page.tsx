@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
+import { toast } from "sonner"
 
 const LEAD_SOURCES = ["Website", "Referral", "Cold_Call", "Email"]
 
@@ -38,9 +39,11 @@ export default function NewLeadPage() {
 
     try {
       await apiClient.post("/leads", formData)
+      toast.success("Lead created successfully")
       router.push("/dashboard/leads")
     } catch (err: any) {
       setError(err.message || "Failed to create lead")
+      toast.error(err.message || "Failed to create lead")
     } finally {
       setLoading(false)
     }
@@ -168,10 +171,10 @@ export default function NewLeadPage() {
             </Button>
             <Button 
               type="submit" 
-              disabled={loading}
+              loading={loading}
               className="h-9 px-8 rounded-lg text-xs font-bold shadow-lg shadow-primary/10 uppercase tracking-wider"
             >
-              {loading ? "Creating..." : "Create Lead"}
+              Create Lead
             </Button>
           </CardFooter>
         </form>

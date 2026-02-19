@@ -101,28 +101,45 @@ export const getProductivityReport = async (req: Request, res: Response) => {
       }
     });
 
-    // Get completed task counts per employee
-    const employeeStats = await Promise.all(employees.map(async (emp) => {
-      const completedTasks = await prisma.task.count({
-        where: { assigneeId: emp.id, status: 'Completed' }
-      });
-      const pendingTasks = await prisma.task.count({
-        where: { assigneeId: emp.id, status: { in: ['Pending', 'In Progress'] } }
-      });
+    // Optimized: Fetch all task stats in one go using aggregation
+    const taskStats = await prisma.task.groupBy({
+      by: ['assigneeId', 'status'],
+      where: { 
+        assigneeId: { in: employees.map(e => e.id) },
+        status: { in: ['Completed', 'Pending', 'In Progress'] }
+      },
+      _count: true
+    });
 
+    // Map stats to employee ID for quick lookup
+    const statsMap: Record<number, { completed: number; pending: number }> = {};
+    taskStats.forEach(stat => {
+      if (!stat.assigneeId) return;
+      if (!statsMap[stat.assigneeId]) statsMap[stat.assigneeId] = { completed: 0, pending: 0 };
+      
+      if (stat.status === 'Completed') {
+        statsMap[stat.assigneeId].completed += stat._count;
+      } else {
+        statsMap[stat.assigneeId].pending += stat._count;
+      }
+    });
+
+    const employeeStats = employees.map((emp) => {
+      const stats = statsMap[emp.id] || { completed: 0, pending: 0 };
+      
       return {
         name: `${emp.firstName} ${emp.lastName}`,
         department: emp.department?.name || 'Unassigned',
         totalTasks: emp._count.assignedTasks,
-        completedTasks,
-        pendingTasks,
+        completedTasks: stats.completed,
+        pendingTasks: stats.pending,
         eodReports: emp._count.eodReports,
         attendanceDays: (emp as any)._count.attendanceLogs,
-        completionRate: (emp as any)._count.assignedTasks > 0 
-          ? Math.round((completedTasks / (emp as any)._count.assignedTasks) * 100) 
+        completionRate: emp._count.assignedTasks > 0 
+          ? Math.round((stats.completed / emp._count.assignedTasks) * 100) 
           : 0
       };
-    }));
+    });
 
     const totalTasks = employeeStats.reduce((a, e) => a + e.totalTasks, 0);
     const totalCompleted = employeeStats.reduce((a, e) => a + e.completedTasks, 0);
