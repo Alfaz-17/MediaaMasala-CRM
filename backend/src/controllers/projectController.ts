@@ -59,6 +59,24 @@ export const getProjects = async (req: Request, res: Response) => {
             company: true
           }
         },
+        projectManager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: { select: { name: true } },
+            department: { select: { name: true } }
+          }
+        },
+        relationshipManager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: { select: { name: true } },
+            department: { select: { name: true } }
+          }
+        },
         _count: {
           select: { tasks: true }
         }
@@ -103,6 +121,24 @@ export const getProjectById = async (req: Request, res: Response) => {
             email: true
           }
         },
+        projectManager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: { select: { name: true } },
+            department: { select: { name: true } }
+          }
+        },
+        relationshipManager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            role: { select: { name: true } },
+            department: { select: { name: true } }
+          }
+        },
         tasks: {
           select: {
             id: true,
@@ -129,7 +165,7 @@ export const getProjectById = async (req: Request, res: Response) => {
 
 export const updateProject = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, description, status, leadId } = req.body;
+  const { name, description, status, leadId, projectManagerId, relationshipManagerId } = req.body;
   const user = (req as any).user;
   const scope = (req as any).permissionScope;
 
@@ -156,7 +192,9 @@ export const updateProject = async (req: Request, res: Response) => {
         name, 
         description, 
         status,
-        leadId: leadId ? Number(leadId) : undefined 
+        leadId: leadId ? String(leadId) : undefined,
+        projectManagerId: projectManagerId !== undefined ? (projectManagerId ? Number(projectManagerId) : null) : undefined,
+        relationshipManagerId: relationshipManagerId !== undefined ? (relationshipManagerId ? Number(relationshipManagerId) : null) : undefined
       }
     });
 
@@ -177,7 +215,7 @@ export const updateProject = async (req: Request, res: Response) => {
 };
 
 export const createProject = async (req: Request, res: Response) => {
-  const { name, description, status, leadId } = req.body;
+  const { name, description, status, leadId, projectManagerId, relationshipManagerId } = req.body;
   const user = (req as any).user;
 
   try {
@@ -207,7 +245,9 @@ export const createProject = async (req: Request, res: Response) => {
         name,
         description,
         status: status || 'Active',
-        leadId: leadId ? String(leadId) : undefined
+        leadId: leadId ? String(leadId) : undefined,
+        projectManagerId: projectManagerId ? Number(projectManagerId) : undefined,
+        relationshipManagerId: relationshipManagerId ? Number(relationshipManagerId) : undefined
       }
     });
 

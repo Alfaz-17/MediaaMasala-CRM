@@ -1,2 +1,23 @@
- - change status  data type from varchar to enum in leads table
- - add new table which will keep the logs of leads once it get assigned  , table fields : id , lead_id , asignee_id , assigned_to_id , date , lead_status , created_at , updated_at
+-in projects and products showing saprately
+-products and projects show deatils and also task details add assign relationship manager(add text area in project and product descrption ) 
+add filed enum for project status  
+-make diifrent table for show projects 
+
+add filter in task wen can filter projects ,products ,leads ,other
+
+add loading state not render all pages
+in filte when we selsct department than check 2 filter that departmetn heirarchy     
+
+-leave managemnt start date dont allow to select past date
+-leav permmisstion matrix
+--error in applying error
+
+
+
+-(text are project and product description )remove task and lead and ad filed reports
+-reposrt matirx have sales reports projectrepostr add scope in permisstion matrix 
+
+
+
+
+

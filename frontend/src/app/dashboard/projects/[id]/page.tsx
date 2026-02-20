@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, use } from "react"
+import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { apiClient } from "@/lib/api-client"
@@ -16,7 +16,9 @@ import {
   CheckCircle2, 
   Clock,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  Loader2,
+  UserCheck
 } from "lucide-react"
 import Link from "next/link"
 
@@ -32,6 +34,20 @@ interface Project {
     company?: string
     email: string
   }
+  projectManager?: {
+    id: number
+    firstName: string
+    lastName: string
+    role?: { name: string }
+    department?: { name: string }
+  }
+  relationshipManager?: {
+    id: number
+    firstName: string
+    lastName: string
+    role?: { name: string }
+    department?: { name: string }
+  }
   tasks: Array<{
     id: string
     title: string
@@ -42,9 +58,8 @@ interface Project {
   createdAt: string
 }
 
-export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
-  const id = resolvedParams.id
+export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const id = params.id
   const { data: session } = useSession()
   const router = useRouter()
   const { hasPermission } = usePermissions()
@@ -65,7 +80,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setDeleting(true)
     try {
       await apiClient.delete(`/projects/${project.id}`)
-      router.push("/dashboard/portfolio?tab=projects")
+      router.push("/dashboard/projects")
     } catch (err) {
       console.error("Error deleting project:", err)
       setDeleting(false)
@@ -79,7 +94,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         setProject(data)
       } catch (err) {
         console.error("Error fetching project:", err)
-        router.push("/dashboard/portfolio?tab=projects")
+        router.push("/dashboard/projects")
       } finally {
         setLoading(false)
       }
@@ -102,7 +117,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           variant="ghost" 
           size="sm" 
           className="w-fit text-[10px] font-bold uppercase tracking-widest h-8 px-0 hover:bg-transparent opacity-50 hover:opacity-100 transition-opacity"
-          onClick={() => router.push("/dashboard/portfolio?tab=projects")}
+          onClick={() => router.push("/dashboard/projects")}
         >
           <ArrowLeft className="h-3 w-3 mr-2" />
           Back to Projects
@@ -214,6 +229,46 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
              </CardContent>
            </Card>
 
+           {/* Relationship Manager Card */}
+           {project.relationshipManager && (
+             <Card className="border-border/40 shadow-sm overflow-hidden border-l-4 border-l-blue-500/60">
+               <CardHeader className="pb-3 pt-5 px-5">
+                 <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Relationship Manager</p>
+                 <CardTitle className="text-sm font-bold">{project.relationshipManager.firstName} {project.relationshipManager.lastName}</CardTitle>
+               </CardHeader>
+               <CardContent className="px-5 pb-5 space-y-3">
+                 <div className="flex items-center gap-2">
+                   <User className="h-3 w-3 text-blue-500/60" />
+                   <span className="text-xs font-medium text-foreground/70">{project.relationshipManager.role?.name}</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <Briefcase className="h-3 w-3 text-muted-foreground/40" />
+                   <span className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider">{project.relationshipManager.department?.name}</span>
+                 </div>
+               </CardContent>
+             </Card>
+           )}
+
+           {/* Project Manager Card */}
+           {project.projectManager && (
+             <Card className="border-border/40 shadow-sm overflow-hidden border-l-4 border-l-green-500/60">
+               <CardHeader className="pb-3 pt-5 px-5">
+                 <p className="text-[9px] font-black text-green-600 uppercase tracking-[0.2em] mb-1">Project Manager</p>
+                 <CardTitle className="text-sm font-bold">{project.projectManager.firstName} {project.projectManager.lastName}</CardTitle>
+               </CardHeader>
+               <CardContent className="px-5 pb-5 space-y-3">
+                 <div className="flex items-center gap-2">
+                   <UserCheck className="h-3 w-3 text-green-500/60" />
+                   <span className="text-xs font-medium text-foreground/70">{project.projectManager.role?.name}</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <Briefcase className="h-3 w-3 text-muted-foreground/40" />
+                   <span className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider">{project.projectManager.department?.name}</span>
+                 </div>
+               </CardContent>
+             </Card>
+           )}
+
            <div className="p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60">Quick Actions</h4>
               <div className="space-y-2">
@@ -241,8 +296,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     className="w-full justify-start text-[10px] font-bold uppercase tracking-widest h-9 text-destructive hover:bg-destructive/10 border-destructive/20" 
                     variant="outline"
                     onClick={handleDeleteProject}
-                    loading={deleting}
+                    disabled={deleting}
                   >
+                     {deleting ? <Loader2 className="h-3 w-3 mr-2 animate-spin" /> : null}
                      Delete Project
                   </Button>
                 )}

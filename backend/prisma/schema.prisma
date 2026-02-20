@@ -129,6 +129,14 @@ model Employee {
   approvedLeaves LeaveRequest[] @relation("ApprovedLeaves")
   activityLogs   ActivityLog[]
 
+  // Product Manager Assignment
+  managedProducts Product[] @relation("ProductManager")
+
+  // Project Manager Assignments
+  projectsAsRelationshipManager Project[] @relation("ProjectRelationshipManager")
+  projectsAsProjectManager      Project[] @relation("ProjectProjectManager")
+
+
   joiningDate DateTime?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
@@ -161,6 +169,20 @@ enum LeadSource {
   Referral
   Cold_Call
   Email
+}
+
+enum ProjectStatus {
+  Planning
+  Active
+  On_Hold
+  Completed
+  Cancelled
+}
+
+enum ProductStatus {
+  Draft
+  Active
+  Discontinued
 }
 
 model Lead {
@@ -240,16 +262,22 @@ model Task {
 model Product {
   id          Int     @id @default(autoincrement())
   name        String  @unique
-  description String?
+  description String? @db.Text
   price       Float?  @default(0)
   category    String? // e.g. "Marine Spare", "Engine Core"
-  isActive    Boolean @default(true)
+  status      ProductStatus @default(Active)
+  isActive    Boolean       @default(true)
+
+  // Product Manager Assignment
+  productManagerId Int?
+  productManager   Employee? @relation("ProductManager", fields: [productManagerId], references: [id])
 
   tasks Task[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([productManagerId])
   @@map("products")
 }
 
@@ -345,11 +373,17 @@ model EodReport {
 model Project {
   id          Int     @id @default(autoincrement())
   name        String
-  description String?
-  status      String  @default("Active") // Active, Completed, On Hold
+  description String? @db.Text
+  status      ProjectStatus @default(Active)
 
   leadId String? @unique
   lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  // Manager Assignments
+  relationshipManagerId Int?
+  relationshipManager   Employee? @relation("ProjectRelationshipManager", fields: [relationshipManagerId], references: [id])
+  projectManagerId      Int?
+  projectManager        Employee? @relation("ProjectProjectManager", fields: [projectManagerId], references: [id])
 
   tasks Task[]
 
@@ -357,6 +391,8 @@ model Project {
   updatedAt DateTime @updatedAt
 
   @@index([status])
+  @@index([relationshipManagerId])
+  @@index([projectManagerId])
   @@map("projects")
 }
 

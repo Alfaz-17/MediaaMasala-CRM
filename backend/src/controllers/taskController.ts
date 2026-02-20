@@ -8,6 +8,7 @@ const employeeSelect = {
   firstName: true,
   lastName: true,
   email: true,
+  departmentId: true,
   department: {
     select: {
       id: true,
@@ -121,7 +122,7 @@ export const getTasks = async (req: Request, res: Response) => {
       delete whereClause.OR;
     }
 
-    const tasks = await (prisma as any).task.findMany({
+    const tasks = await prisma.task.findMany({
       where: whereClause,
       select: {
         id: true,
@@ -157,7 +158,7 @@ export const getTaskById = async (req: Request, res: Response) => {
   const scope = (req as any).permissionScope;
 
   try {
-    const task = await (prisma as any).task.findUnique({
+    const task = await prisma.task.findUnique({
       where: { id },
       select: {
         id: true,
@@ -190,8 +191,8 @@ export const getTaskById = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Access denied: Task does not belong to you' });
     }
     if (scope === 'department') {
-      const assigneeDeptId = task.assignee?.departmentId;
-      const creatorDeptId = task.creator?.departmentId;
+      const assigneeDeptId = (task.assignee as any)?.departmentId;
+      const creatorDeptId = (task.creator as any)?.departmentId;
       if (assigneeDeptId !== user.departmentId && creatorDeptId !== user.departmentId) {
         return res.status(403).json({ message: 'Access denied: Task belongs to another department' });
       }
@@ -199,7 +200,7 @@ export const getTaskById = async (req: Request, res: Response) => {
     if (scope === 'team') {
       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
       const teamIds = [user.employeeId, ...reporteeIds];
-      if (!teamIds.includes(task.assigneeId) && !teamIds.includes(task.creatorId)) {
+      if (!teamIds.includes(task.assigneeId as number) && !teamIds.includes(task.creatorId as number)) {
         return res.status(403).json({ message: 'Access denied: Task is not in your team scope' });
       }
     }
@@ -233,8 +234,12 @@ export const createTask = async (req: Request, res: Response) => {
     }
 
     if (scope === 'department') {
+      const parsedAssigneeId = Number(targetAssigneeId);
+      if (isNaN(parsedAssigneeId)) {
+          return res.status(400).json({ message: 'Invalid assignee ID' });
+      }
       const assigneeEmp = await prisma.employee.findUnique({ 
-        where: { id: Number(targetAssigneeId) },
+        where: { id: parsedAssigneeId },
         select: { departmentId: true }
       });
       if (!assigneeEmp || assigneeEmp.departmentId !== user.departmentId) {
@@ -242,18 +247,23 @@ export const createTask = async (req: Request, res: Response) => {
       }
     }
 
-    const task = await (prisma as any).task.create({
+    // Ensure IDs are valid numbers or null
+    const validProjectId = (projectId && !isNaN(Number(projectId))) ? Number(projectId) : null;
+    const validProductId = (productId && !isNaN(Number(productId))) ? Number(productId) : null;
+    const validAssigneeId = (targetAssigneeId && !isNaN(Number(targetAssigneeId))) ? Number(targetAssigneeId) : user.employeeId;
+
+    const task = await prisma.task.create({
       data: {
         title,
         description,
         dueDate: new Date(dueDate),
         priority,
         status: 'Pending',
-        assigneeId: Number(targetAssigneeId),
+        assigneeId: validAssigneeId,
         creatorId: user.employeeId,
         relatedToLeadId: leadId ? String(leadId) : null,
-        projectId: projectId ? Number(projectId) : null,
-        productId: productId ? Number(productId) : null
+        projectId: validProjectId,
+        productId: validProductId
       },
       include: {
         assignee: { select: { firstName: true, lastName: true } }
@@ -271,12 +281,23 @@ export const createTask = async (req: Request, res: Response) => {
       });
     }
 
-    if (projectId) {
+    if (validProjectId) {
        await logActivity({
         employeeId: user.employeeId,
         module: 'projects',
         action: 'TASK_CREATE',
-        entityId: String(projectId),
+        entityId: String(validProjectId),
+        entityName: title,
+        description: `Task created: ${title}`
+      });
+    }
+    
+    if (validProductId) {
+       await logActivity({
+        employeeId: user.employeeId,
+        module: 'products',
+        action: 'TASK_CREATE',
+        entityId: String(validProductId),
         entityName: title,
         description: `Task created: ${title}`
       });

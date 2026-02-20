@@ -11,3 +11,27 @@ Admin (superadmin@media-masala.com)  ← ALL scope
             ├── BDE-2B  (sales.bde2b@test.com)  → 10 Leads
             ├── BDE-2C  (sales.bde2c@test.com)  → 10 Leads
             └── BDE-2D  (sales.bde2d@test.com)  → 10 Leads
+
+Product Department Hierarchy:
+└── Product HOD  (prod.hod@test.com)
+    ├── Project PM-1 (prod.pm1@test.com)
+    │   ├── Dev-1 (prod.dev1@test.com)
+    │   ├── Test-1 (prod.test1@test.com)
+    │   └── Design-1 (prod.design1@test.com)
+    └── Project PM-2 (prod.pm2@test.com)
+        ├── Dev-2 (prod.dev2@test.com)
+        ├── Test-2 (prod.test2@test.com)
+        └── Design-2 (prod.design2@test.com)
+
+Project Department Hierarchy:
+└── Project HOD  (proj.hod@test.com)
+    ├── Project PM-1 (proj.pm1@test.com)
+    │   ├── Dev-1 (proj.dev1@test.com)
+    │   ├── Test-1 (proj.test1@test.com)
+    │   └── Design-1 (proj.design1@test.com)
+    └── Project PM-2 (proj.pm2@test.com)
+        ├── Dev-2 (proj.dev2@test.com)
+        ├── Test-2 (proj.test2@test.com)
+        └── Design-2 (proj.design2@test.com)
+
+All accounts password : Password@123
