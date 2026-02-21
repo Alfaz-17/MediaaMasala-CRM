@@ -108,7 +108,10 @@ async function handleResponse(response: Response, method?: string) {
       if (!isSigningOut) {
         isSigningOut = true;
         const { signOut } = await import("next-auth/react");
-        signOut({ callbackUrl: "/auth/login?error=SessionExpired" });
+        signOut({ 
+          callbackUrl: "/auth/login?error=SessionExpired",
+          redirect: true 
+        });
       }
       // Throw a silent error to stop the calling code in its tracks
       throw new Error("Session expired");
