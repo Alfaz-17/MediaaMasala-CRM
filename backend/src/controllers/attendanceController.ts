@@ -71,16 +71,20 @@ export const checkIn = async (req: Request, res: Response) => {
   today.setHours(0, 0, 0, 0);
 
   try {
-    // Check if already checked in today
+    // Check for any active check-in (where check-out is null)
+    // This handles both same-day check-ins and night shifts
     const existing = await (prisma as any).attendance.findFirst({
       where: {
         employeeId: user.employeeId,
-        date: { gte: today }
-      }
+        checkOut: null
+      },
+      orderBy: { date: 'desc' }
     });
 
     if (existing) {
-      return res.status(400).json({ message: 'Already checked in today' });
+      return res.status(400).json({ 
+        message: 'You have an active check-in session. Please check out first.' 
+      });
     }
 
     const record = await (prisma as any).attendance.create({
@@ -104,16 +108,17 @@ export const checkOut = async (req: Request, res: Response) => {
   today.setHours(0, 0, 0, 0);
 
   try {
+    // Find the most recent active check-in record
     const record = await (prisma as any).attendance.findFirst({
       where: {
         employeeId: user.employeeId,
-        date: { gte: today },
         checkOut: null
-      }
+      },
+      orderBy: { date: 'desc' }
     });
 
     if (!record) {
-      return res.status(404).json({ message: 'No active check-in found for today' });
+      return res.status(404).json({ message: 'No active check-in session found' });
     }
 
     const updated = await (prisma as any).attendance.update({
