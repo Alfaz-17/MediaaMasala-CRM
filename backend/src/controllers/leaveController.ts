@@ -99,18 +99,37 @@ export const approveLeave = async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { id } = req.params;
   const { status, managerNote } = req.body;
+  const scope = (req as any).permissionScope;
 
   try {
     const existingLeave = await (prisma as any).leaveRequest.findUnique({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      include: { employee: true }
     });
 
     if (!existingLeave) {
       return res.status(404).json({ message: 'Leave request not found' });
     }
 
+    // 1. Prevent self-approval
     if (existingLeave.employeeId === user.employeeId) {
       return res.status(403).json({ message: 'You cannot approve your own leave request' });
+    }
+
+    // 2. RBAC Scope Check
+    if (scope === 'department' && existingLeave.employee.departmentId !== user.departmentId) {
+      return res.status(403).json({ message: 'Access denied: Employee belongs to another department' });
+    }
+    
+    if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      if (!reporteeIds.includes(existingLeave.employeeId)) {
+        return res.status(403).json({ message: 'Access denied: Employee is not in your team scope' });
+      }
+    }
+    
+    if (scope === 'own') {
+       return res.status(403).json({ message: 'Access denied: You do not have permission to approve leaves' });
     }
 
     const leave = await (prisma as any).leaveRequest.update({

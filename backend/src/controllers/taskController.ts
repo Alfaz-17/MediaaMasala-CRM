@@ -313,10 +313,32 @@ export const createTask = async (req: Request, res: Response) => {
 export const updateTask = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { status, completionNote, dueDate, ...rest } = req.body;
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
 
   try {
     const existingTask = await prisma.task.findUnique({ where: { id } });
     if (!existingTask) return res.status(404).json({ message: 'Task not found' });
+
+    // RBAC Scope Check
+    if (scope === 'own' && existingTask.assigneeId !== user.employeeId && existingTask.creatorId !== user.employeeId) {
+      return res.status(403).json({ message: 'Access denied: You can only edit your own tasks' });
+    }
+    if (scope === 'department') {
+      const assignee = await prisma.employee.findUnique({ where: { id: existingTask.assigneeId || 0 }, select: { departmentId: true } });
+      const creator = await prisma.employee.findUnique({ where: { id: existingTask.creatorId || 0 }, select: { departmentId: true } });
+      
+      if (assignee?.departmentId !== user.departmentId && creator?.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied: Task belongs to another department' });
+      }
+    }
+    if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      const teamIds = [user.employeeId, ...reporteeIds];
+      if (!teamIds.includes(existingTask.assigneeId as number) && !teamIds.includes(existingTask.creatorId as number)) {
+        return res.status(403).json({ message: 'Access denied: Task is not in your team scope' });
+      }
+    }
 
     const updateData: any = { ...rest };
     if (dueDate) updateData.dueDate = new Date(dueDate);
@@ -345,8 +367,32 @@ export const updateTask = async (req: Request, res: Response) => {
 
 export const deleteTask = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
 
   try {
+    const existingTask = await prisma.task.findUnique({ where: { id } });
+    if (!existingTask) return res.status(404).json({ message: 'Task not found' });
+
+    // RBAC Scope Check
+    if (scope === 'own' && existingTask.assigneeId !== user.employeeId && existingTask.creatorId !== user.employeeId) {
+      return res.status(403).json({ message: 'Access denied: You can only delete your own tasks' });
+    }
+    if (scope === 'department') {
+      const assignee = await prisma.employee.findUnique({ where: { id: existingTask.assigneeId || 0 }, select: { departmentId: true } });
+      const creator = await prisma.employee.findUnique({ where: { id: existingTask.creatorId || 0 }, select: { departmentId: true } });
+      if (assignee?.departmentId !== user.departmentId && creator?.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied: Task belongs to another department' });
+      }
+    }
+    if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      const teamIds = [user.employeeId, ...reporteeIds];
+      if (!teamIds.includes(existingTask.assigneeId as number) && !teamIds.includes(existingTask.creatorId as number)) {
+        return res.status(403).json({ message: 'Access denied: Task is not in your team scope' });
+      }
+    }
+
     await prisma.task.delete({ where: { id } });
     res.status(204).send();
   } catch (error) {

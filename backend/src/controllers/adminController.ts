@@ -181,44 +181,62 @@ export const updateEmployee = async (req: Request, res: Response) => {
             return res.status(403).json({ message: 'Access denied: You can only edit your own profile' });
         }
 
+        const existingEmp = await prisma.employee.findUnique({ where: { id: employeeId } });
+        if (!existingEmp) return res.status(404).json({ message: 'Employee not found' });
+
         const employee = await prisma.$transaction(async (tx) => {
-            // If scope is 'department' or 'team', we should verify here too, 
-            // but for now we'll assume the frontend/middleware handles the initial list filtering.
-            
+            const updateData: any = { firstName, lastName, phone };
+
+            // SECURITY PATCH: Only allow Role/Dept/Manager/Active changes if scope is 'all'
+            // OR if the values aren't actually changing (to allow the request to pass)
+            if (scope === 'all') {
+                if (departmentId !== undefined) updateData.departmentId = Number(departmentId);
+                if (roleId !== undefined) updateData.roleId = Number(roleId);
+                if (managerId !== undefined) updateData.managerId = managerId ? Number(managerId) : null;
+            } else {
+                // If not 'all' scope, reject if they try to change sensitive fields
+                if (
+                    (departmentId !== undefined && Number(departmentId) !== existingEmp.departmentId) ||
+                    (roleId !== undefined && Number(roleId) !== existingEmp.roleId) ||
+                    (managerId !== undefined && (managerId ? Number(managerId) : null) !== existingEmp.managerId) ||
+                    (isActive !== undefined)
+                ) {
+                    throw new Error('Access denied: You do not have permission to change role, department, manager, or status');
+                }
+            }
+
             // Validation: Role must belong to Department (or be global)
-            const role = await tx.role.findUnique({ where: { id: Number(roleId) } });
-            if (role && role.departmentId && role.departmentId !== Number(departmentId)) {
-                throw new Error('Selected role does not belong to the selected department');
+            if (updateData.roleId && updateData.departmentId) {
+                const role = await tx.role.findUnique({ where: { id: updateData.roleId } });
+                if (role && role.departmentId && role.departmentId !== updateData.departmentId) {
+                    throw new Error('Selected role does not belong to the selected department');
+                }
             }
 
             const emp = await tx.employee.update({
                 where: { id: employeeId },
-                data: {
-                    firstName,
-                    lastName,
-                    phone,
-                    departmentId: Number(departmentId),
-                    roleId: Number(roleId),
-                    managerId: managerId ? Number(managerId) : null
-                }
+                data: updateData
             });
 
-            if (emp.userId !== null && typeof isActive === 'boolean') {
-                await tx.user.update({
-                    where: { id: emp.userId },
-                    data: { 
-                        isActive,
-                        roleId: Number(roleId),
-                        departmentId: Number(departmentId) 
-                    }
-                });
+            if (emp.userId !== null) {
+                const userUpdate: any = {};
+                if (typeof isActive === 'boolean' && scope === 'all') userUpdate.isActive = isActive;
+                if (updateData.roleId) userUpdate.roleId = updateData.roleId;
+                if (updateData.departmentId) userUpdate.departmentId = updateData.departmentId;
+
+                if (Object.keys(userUpdate).length > 0) {
+                    await tx.user.update({
+                        where: { id: emp.userId },
+                        data: userUpdate
+                    });
+                }
             }
             return emp;
         });
 
         res.json(employee);
-    } catch (error) {
-        res.status(400).json({ message: 'Error updating employee profile' });
+    } catch (error: any) {
+        res.status(400).json({ message: error.message || 'Error updating employee profile' });
     }
 };
 

@@ -12,7 +12,15 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) return res.status(401).json({ message: 'Invalid or expired token' });
-    (req as any).user = user;
+    
+    // SECURITY PATCH: Ensure metadata fields are never 'undefined' (which Prisma ignores)
+    // but instead explicitly 'null' or the value.
+    (req as any).user = {
+      ...user,
+      id: user.id || null,
+      employeeId: user.employeeId || null,
+      departmentId: user.departmentId || null,
+    };
     next();
   });
 };
