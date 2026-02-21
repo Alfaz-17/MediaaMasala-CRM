@@ -70,8 +70,14 @@ export const getLeaves = async (req: Request, res: Response) => {
 export const applyLeave = async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { startDate, endDate, type, reason } = req.body;
-
   try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(startDate);
+    if (start < today) {
+      return res.status(400).json({ message: 'Leave start date cannot be in the past' });
+    }
+
     const leave = await (prisma as any).leaveRequest.create({
       data: {
         employeeId: user.employeeId,
@@ -95,6 +101,18 @@ export const approveLeave = async (req: Request, res: Response) => {
   const { status, managerNote } = req.body;
 
   try {
+    const existingLeave = await (prisma as any).leaveRequest.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existingLeave) {
+      return res.status(404).json({ message: 'Leave request not found' });
+    }
+
+    if (existingLeave.employeeId === user.employeeId) {
+      return res.status(403).json({ message: 'You cannot approve your own leave request' });
+    }
+
     const leave = await (prisma as any).leaveRequest.update({
       where: { id: parseInt(id) },
       data: {

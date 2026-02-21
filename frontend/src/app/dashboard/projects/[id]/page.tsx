@@ -148,9 +148,14 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                {project.description || "No detailed description provided for this project."}
-              </p>
+              {project.description ? (
+                <div 
+                  className="text-sm text-foreground/80 leading-relaxed prose-content"
+                  dangerouslySetInnerHTML={{ __html: project.description }}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No detailed description provided for this project.</p>
+              )}
             </CardContent>
           </Card>
 

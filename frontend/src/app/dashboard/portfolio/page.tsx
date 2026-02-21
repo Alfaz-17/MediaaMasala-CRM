@@ -350,7 +350,14 @@ function PortfolioContent() {
                                     </DropdownMenu>
                                 </div>
                                 <CardTitle className="mt-3 text-base">{product.name}</CardTitle>
-                                <CardDescription className="line-clamp-2 text-xs mt-1 h-8">{product.description || "No description provided."}</CardDescription>
+                                {product.description ? (
+                                    <div 
+                                        className="line-clamp-2 text-[11px] leading-relaxed mt-1 text-muted-foreground prose prose-xs max-w-none [&_p]:m-0 [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs h-8 overflow-hidden" 
+                                        dangerouslySetInnerHTML={{ __html: product.description }} 
+                                    />
+                                ) : (
+                                    <CardDescription className="line-clamp-2 text-xs mt-1 h-8">No description provided.</CardDescription>
+                                )}
                             </CardHeader>
                             <CardContent className="mt-auto pt-0">
                                 <div className="flex flex-wrap gap-2 mt-2 mb-4">
@@ -477,7 +484,14 @@ function PortfolioContent() {
                                 </div>
                             </CardHeader>
                             <CardContent className="mt-auto pt-0">
-                                <p className="text-xs text-muted-foreground line-clamp-2 h-8 mb-4">{project.description || "No project details."}</p>
+                                {project.description ? (
+                                    <div 
+                                        className="text-[11px] text-muted-foreground/80 line-clamp-2 leading-relaxed mb-4 prose prose-xs max-w-none [&_p]:m-0 [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs h-8 overflow-hidden"
+                                        dangerouslySetInnerHTML={{ __html: project.description }}
+                                    />
+                                ) : (
+                                    <p className="text-xs text-muted-foreground line-clamp-2 h-8 mb-4">No project details.</p>
+                                )}
                                 <Button 
                                     variant="outline" 
                                     size="sm" 

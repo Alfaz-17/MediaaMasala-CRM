@@ -59,6 +59,8 @@ interface Project {
     role?: { name: string }
     department?: { name: string }
   }
+  projectManagerId?: number
+  relationshipManagerId?: number
   createdAt: string
 }
 
@@ -95,8 +97,9 @@ export default function ProjectsPage() {
 
   // Employee list for PM/RM selector
   const [employees, setEmployees] = useState<any[]>([])
-  const [formPMId, setFormPMId] = useState<string>("")
-  const [formRMId, setFormRMId] = useState<string>("")
+  const [formPMId, setFormPMId] = useState<string>("none")
+  const [formRMId, setFormRMId] = useState<string>("none")
+  const [formName, setFormName] = useState<string>("")
   const [formDescription, setFormDescription] = useState<string>("")
   const [formStatus, setFormStatus] = useState<string>("Active")
 
@@ -148,13 +151,38 @@ export default function ProjectsPage() {
     }
     if (session) fetchEmployees()
   }, [session])
+  
+  // Sync form states when editingProject changes
+  useEffect(() => {
+    if (isModalOpen) {
+      if (editingProject) {
+        setFormName(editingProject.name || "")
+        setFormStatus(editingProject.status || "Active")
+        setFormDescription(editingProject.description || "")
+        
+        // Use flat IDs if available, otherwise use object IDs
+        const pmId = editingProject.projectManagerId || editingProject.projectManager?.id
+        const rmId = editingProject.relationshipManagerId || editingProject.relationshipManager?.id
+        
+        setFormPMId(pmId ? String(pmId) : "none")
+        setFormRMId(rmId ? String(rmId) : "none")
+      } else {
+        // Reset for new project
+        setFormName("")
+        setFormStatus("Active")
+        setFormDescription("")
+        setFormPMId("none")
+        setFormRMId("none")
+      }
+    }
+  }, [isModalOpen, editingProject])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSubmitting(true)
     const formData = new FormData(e.currentTarget)
     const payload = {
-      name: formData.get("name"),
+      name: formName,
       status: formStatus || "Active",
       description: formDescription,
       projectManagerId: (formPMId && formPMId !== "none") ? formPMId : null,
@@ -171,8 +199,9 @@ export default function ProjectsPage() {
       }
       setIsModalOpen(false)
       setEditingProject(null)
-      setFormPMId("")
-      setFormRMId("")
+      setFormName("")
+      setFormPMId("none")
+      setFormRMId("none")
       setFormDescription("")
       setFormStatus("Active")
       refetch()
@@ -235,19 +264,7 @@ export default function ProjectsPage() {
                   open={isModalOpen} 
                   onOpenChange={(open) => { 
                     setIsModalOpen(open); 
-                    if(!open) { 
-                      setEditingProject(null); 
-                      setFormPMId(""); 
-                      setFormRMId(""); 
-                      setFormDescription(""); 
-                      setFormStatus("Active"); 
-                    } else if (editingProject) {
-                      // Pre-fill when opening for edit
-                      setFormPMId(editingProject.projectManager?.id ? String(editingProject.projectManager.id) : "none"); 
-                      setFormRMId(editingProject.relationshipManager?.id ? String(editingProject.relationshipManager.id) : "none"); 
-                      setFormDescription(editingProject.description || ""); 
-                      setFormStatus(editingProject.status || "Active"); 
-                    }
+                    if(!open) setEditingProject(null);
                   }}
                 >
                   <DialogTrigger asChild>
@@ -264,7 +281,14 @@ export default function ProjectsPage() {
                      <div className="grid gap-4 py-6">
                        <div className="space-y-2">
                          <Label htmlFor="name">Project Name</Label>
-                         <Input id="name" name="name" defaultValue={editingProject?.name} required placeholder="e.g. Media Masala Design System" />
+                         <Input 
+                            id="name" 
+                            name="name" 
+                            value={formName} 
+                            onChange={(e) => setFormName(e.target.value)}
+                            required 
+                            placeholder="e.g. Media Masala Design System" 
+                         />
                        </div>
                        <div className="space-y-2">
                          <Label htmlFor="status">Status</Label>

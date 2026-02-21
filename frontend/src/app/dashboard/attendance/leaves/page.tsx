@@ -56,6 +56,11 @@ export default function LeavesPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [isRecursive, setIsRecursive] = useState<boolean>(false)
 
+  // Today's date in YYYY-MM-DD format (local timezone)
+  const todayStr = new Date().toLocaleDateString('en-CA')
+  const [formStartDate, setFormStartDate] = useState(todayStr)
+  const [formEndDate, setFormEndDate] = useState(todayStr)
+
   const { data: leaves = [], isLoading, refetch } = useQuery<LeaveRequest[]>({
     queryKey: ["leaves", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
@@ -174,11 +179,34 @@ export default function LeavesPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="startDate" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Start Date</Label>
-                        <Input id="startDate" name="startDate" type="date" required className="bg-muted/30 border-border/40 h-10 text-xs" />
+                        <Input 
+                          id="startDate" 
+                          name="startDate" 
+                          type="date" 
+                          required 
+                          value={formStartDate}
+                          onChange={(e) => {
+                            setFormStartDate(e.target.value)
+                            if (e.target.value > formEndDate) {
+                              setFormEndDate(e.target.value)
+                            }
+                          }}
+                          min={todayStr}
+                          className="bg-muted/30 border-border/40 h-10 text-xs" 
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="endDate" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">End Date</Label>
-                        <Input id="endDate" name="endDate" type="date" required className="bg-muted/30 border-border/40 h-10 text-xs" />
+                        <Input 
+                          id="endDate" 
+                          name="endDate" 
+                          type="date" 
+                          required 
+                          value={formEndDate}
+                          onChange={(e) => setFormEndDate(e.target.value)}
+                          min={formStartDate}
+                          className="bg-muted/30 border-border/40 h-10 text-xs" 
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -257,7 +285,7 @@ export default function LeavesPage() {
                     </div>
                     <p className="text-[11px] text-muted-foreground/70 italic line-clamp-2">&quot;{leave.reason}&quot;</p>
                     
-                    {canApprove && leave.status === 'Pending' && (
+                    {canApprove && leave.status === 'Pending' && leave.employee.firstName + ' ' + leave.employee.lastName !== session?.user?.name && (
                       <div className="flex gap-2 pt-2">
                         <Button onClick={() => handleApprove(leave.id, 'Approved')} size="sm" className="flex-1 h-8 bg-success hover:bg-success/90">
                           <CheckCircle2 className="mr-1 h-3 w-3" /> Approve
