@@ -20,7 +20,8 @@ export default function LoginPage() {
   const sessionExpired = searchParams.get("error") === "SessionExpired"
 
   useEffect(() => {
-    if (status === "authenticated" && session) {
+    // SECURITY: Only auto-redirect if session is valid AND has no underlying errors (like TokenExpired)
+    if (status === "authenticated" && session && !(session as any).error) {
       router.replace("/dashboard")
     }
   }, [session, status, router])
