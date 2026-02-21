@@ -373,7 +373,7 @@ export default function LeavesPage() {
 
                     <p className="text-[11px] text-muted-foreground/70 italic line-clamp-2">&quot;{leave.reason}&quot;</p>
                     
-                    {canApprove && leave.status === 'Pending' && leave.employee.firstName + ' ' + leave.employee.lastName !== session?.user?.name && (
+                    {canApprove && activeTab === 'team' && leave.status === 'Pending' && (
                       <div className="flex gap-2 pt-2">
                         <Button onClick={() => handleApprove(leave.id, 'Approved')} size="sm" className="flex-1 h-8 bg-success hover:bg-success/90">
                           <CheckCircle2 className="mr-1 h-3 w-3" /> Approve
