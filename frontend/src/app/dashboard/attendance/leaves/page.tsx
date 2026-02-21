@@ -51,6 +51,7 @@ export default function LeavesPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const canApprove = hasPermission("attendance", "approve")
+  const [activeTab, setActiveTab] = useState<'my' | 'team'>(canApprove ? 'team' : 'my')
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
@@ -62,13 +63,22 @@ export default function LeavesPage() {
   const [formEndDate, setFormEndDate] = useState(todayStr)
 
   const { data: leaves = [], isLoading, refetch } = useQuery<LeaveRequest[]>({
-    queryKey: ["leaves", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
+    queryKey: ["leaves", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive, activeTab],
     queryFn: async () => {
       let endpoint = "/leaves?"
-      if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
-      if (selectedEmployeeId !== 'all') {
-          endpoint += `employeeId=${selectedEmployeeId}&`
-          if (isRecursive) endpoint += `recursive=true&`
+      
+      if (activeTab === 'my') {
+        // Fetch only own leaves using employeeId filter on the existing backend
+        // Note: Backend might already support a scope='own' or we can pass current user's employeeId
+        if (session?.user?.employeeId) {
+          endpoint += `employeeId=${session.user.employeeId}&`
+        }
+      } else {
+        if (selectedDeptId !== 'all') endpoint += `departmentId=${selectedDeptId}&`
+        if (selectedEmployeeId !== 'all') {
+            endpoint += `employeeId=${selectedEmployeeId}&`
+            if (isRecursive) endpoint += `recursive=true&`
+        }
       }
       return await apiClient.get(endpoint)
     },
@@ -133,6 +143,24 @@ export default function LeavesPage() {
           </div>
           
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Tab Switched */}
+            {canApprove && (
+              <div className="flex bg-muted/20 p-1 rounded-xl border border-border/40 mr-2">
+                <button
+                  onClick={() => setActiveTab('my')}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'my' ? 'bg-background text-primary shadow-sm ring-1 ring-border/20' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  My Requests
+                </button>
+                <button
+                  onClick={() => setActiveTab('team')}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'team' ? 'bg-background text-primary shadow-sm ring-1 ring-border/20' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Team requests
+                </button>
+              </div>
+            )}
+
             {/* Status Filter */}
             <div className="relative min-w-[130px]">
               <select
@@ -149,17 +177,19 @@ export default function LeavesPage() {
             </div>
 
             {/* Management Filters */}
-            <ManagementFilters 
-              module="attendance"
-              selectedDept={selectedDeptId}
-              setSelectedDept={setSelectedDeptId}
-              selectedEmp={selectedEmployeeId}
-              setSelectedEmp={(id, recursive) => {
-                  setSelectedEmployeeId(id);
-                  setIsRecursive(recursive);
-              }}
-              isRecursive={isRecursive}
-            />
+            {activeTab === 'team' && (
+              <ManagementFilters 
+                module="attendance"
+                selectedDept={selectedDeptId}
+                setSelectedDept={setSelectedDeptId}
+                selectedEmp={selectedEmployeeId}
+                setSelectedEmp={(id, recursive) => {
+                    setSelectedEmployeeId(id);
+                    setIsRecursive(recursive);
+                }}
+                isRecursive={isRecursive}
+              />
+            )}
 
             <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>
               <DialogTrigger asChild>
@@ -235,6 +265,45 @@ export default function LeavesPage() {
           </div>
         </div>
 
+        {/* Personal Stats for "My Requests" */}
+        {activeTab === 'my' && !isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+            <Card className="bg-primary/5 border-primary/10">
+              <CardContent className="pt-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Total Requests</p>
+                  <p className="text-2xl font-bold">{leaves.length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <FileText className="h-5 w-5" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-amber-500/5 border-amber-500/10">
+              <CardContent className="pt-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Pending</p>
+                  <p className="text-2xl font-bold text-amber-600">{leaves.filter(l => l.status === 'Pending').length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                  <Clock className="h-5 w-5" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-success/5 border-success/10">
+              <CardContent className="pt-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-success uppercase tracking-widest">Approved</p>
+                  <p className="text-2xl font-bold text-success">{leaves.filter(l => l.status === 'Approved').length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center text-success">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Leave Requests Grid */}
         <div className="grid gap-6">
           {isLoading ? (
@@ -283,6 +352,25 @@ export default function LeavesPage() {
                         {new Date(leave.startDate).toLocaleDateString([], { month: 'short', day: 'numeric' })} → {new Date(leave.endDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
+                    
+                    {leave.status !== 'Pending' && leave.approvedBy && (
+                      <div className="space-y-2">
+                        <div className={`flex items-center gap-1.5 py-1 px-2 rounded w-fit border ${leave.status === 'Approved' ? 'bg-success/5 border-success/10' : 'bg-destructive/5 border-destructive/10'}`}>
+                          {leave.status === 'Approved' ? <CheckCircle2 className="h-3 w-3 text-success" /> : <XCircle className="h-3 w-3 text-destructive" />}
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${leave.status === 'Approved' ? 'text-success' : 'text-destructive'}`}>
+                            {leave.status === 'Approved' ? 'Approved' : 'Rejected'} By: {leave.approvedBy.firstName} {leave.approvedBy.lastName}
+                          </span>
+                        </div>
+                        {leave.managerNote && (
+                          <div className="bg-muted/30 p-2 rounded-lg border border-border/40">
+                            <p className="text-[10px] text-muted-foreground font-medium leading-relaxed italic">
+                              &ldquo;{leave.managerNote}&rdquo;
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-[11px] text-muted-foreground/70 italic line-clamp-2">&quot;{leave.reason}&quot;</p>
                     
                     {canApprove && leave.status === 'Pending' && leave.employee.firstName + ' ' + leave.employee.lastName !== session?.user?.name && (
