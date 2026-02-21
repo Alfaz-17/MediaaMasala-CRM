@@ -13,12 +13,25 @@ export const getProjects = async (req: Request, res: Response) => {
 
     // Basic SCOPE filtering
     if (scope === 'own' || scope === 'assigned') {
-       whereClause.lead = { ownerId: user.employeeId };
+       whereClause.OR = [
+         { lead: { ownerId: user.employeeId } },
+         { projectManagerId: user.employeeId },
+         { relationshipManagerId: user.employeeId }
+       ];
     } else if (scope === 'department') {
-       whereClause.lead = { departmentId: user.departmentId };
+       whereClause.OR = [
+         { lead: { departmentId: user.departmentId } },
+         { projectManager: { departmentId: user.departmentId } },
+         { relationshipManager: { departmentId: user.departmentId } }
+       ];
     } else if (scope === 'team') {
        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-       whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
+       const teamIds = [user.employeeId, ...reporteeIds];
+       whereClause.OR = [
+         { lead: { ownerId: { in: teamIds } } },
+         { projectManagerId: { in: teamIds } },
+         { relationshipManagerId: { in: teamIds } }
+       ];
     }
 
     // Apply additional filters if scope allows
@@ -102,12 +115,25 @@ export const getProjectById = async (req: Request, res: Response) => {
 
     // SCOPE Filtering
     if (scope === 'own' || scope === 'assigned') {
-       whereClause.lead = { ownerId: user.employeeId };
+       whereClause.OR = [
+         { lead: { ownerId: user.employeeId } },
+         { projectManagerId: user.employeeId },
+         { relationshipManagerId: user.employeeId }
+       ];
     } else if (scope === 'department') {
-       whereClause.lead = { departmentId: user.departmentId };
+       whereClause.OR = [
+         { lead: { departmentId: user.departmentId } },
+         { projectManager: { departmentId: user.departmentId } },
+         { relationshipManager: { departmentId: user.departmentId } }
+       ];
     } else if (scope === 'team') {
        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-       whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
+       const teamIds = [user.employeeId, ...reporteeIds];
+       whereClause.OR = [
+         { lead: { ownerId: { in: teamIds } } },
+         { projectManagerId: { in: teamIds } },
+         { relationshipManagerId: { in: teamIds } }
+       ];
     }
 
     const project = await (prisma as any).project.findFirst({
@@ -173,12 +199,25 @@ export const updateProject = async (req: Request, res: Response) => {
     // 1. Check access first
     let whereClause: any = { id: Number(id) };
     if (scope === 'own' || scope === 'assigned') {
-       whereClause.lead = { ownerId: user.employeeId };
+       whereClause.OR = [
+         { lead: { ownerId: user.employeeId } },
+         { projectManagerId: user.employeeId },
+         { relationshipManagerId: user.employeeId }
+       ];
     } else if (scope === 'department') {
-       whereClause.lead = { departmentId: user.departmentId };
+       whereClause.OR = [
+         { lead: { departmentId: user.departmentId } },
+         { projectManager: { departmentId: user.departmentId } },
+         { relationshipManager: { departmentId: user.departmentId } }
+       ];
     } else if (scope === 'team') {
        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-       whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
+       const teamIds = [user.employeeId, ...reporteeIds];
+       whereClause.OR = [
+         { lead: { ownerId: { in: teamIds } } },
+         { projectManagerId: { in: teamIds } },
+         { relationshipManagerId: { in: teamIds } }
+       ];
     }
 
     const existingProject = await (prisma as any).project.findFirst({ where: whereClause });
@@ -276,12 +315,25 @@ export const deleteProject = async (req: Request, res: Response) => {
     // 1. Check access first
     let whereClause: any = { id: Number(id) };
     if (scope === 'own' || scope === 'assigned') {
-       whereClause.lead = { ownerId: user.employeeId };
+       whereClause.OR = [
+         { lead: { ownerId: user.employeeId } },
+         { projectManagerId: user.employeeId },
+         { relationshipManagerId: user.employeeId }
+       ];
     } else if (scope === 'department') {
-       whereClause.lead = { departmentId: user.departmentId };
+       whereClause.OR = [
+         { lead: { departmentId: user.departmentId } },
+         { projectManager: { departmentId: user.departmentId } },
+         { relationshipManager: { departmentId: user.departmentId } }
+       ];
     } else if (scope === 'team') {
        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-       whereClause.lead = { ownerId: { in: [user.employeeId, ...reporteeIds] } };
+       const teamIds = [user.employeeId, ...reporteeIds];
+       whereClause.OR = [
+         { lead: { ownerId: { in: teamIds } } },
+         { projectManagerId: { in: teamIds } },
+         { relationshipManagerId: { in: teamIds } }
+       ];
     }
 
     const existingProject = await (prisma as any).project.findFirst({ where: whereClause });

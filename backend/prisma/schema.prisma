@@ -7,21 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- RBAC & ORG STRUCTURE ---
-
 model Department {
   id          Int        @id @default(autoincrement())
   name        String     @unique
   code        String     @unique
   description String?
   isActive    Boolean    @default(true)
-  users       User[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
   employees   Employee[]
   leads       Lead[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  Role      Role[]
+  Role        Role[]
+  users       User[]
 
   @@map("departments")
 }
@@ -32,28 +29,26 @@ model Role {
   code         String           @unique
   description  String?
   isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   departmentId Int?
-  department   Department?      @relation(fields: [departmentId], references: [id])
-  permissions  RolePermission[]
-  users        User[]
   employees    Employee[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  permissions  RolePermission[]
+  department   Department?      @relation(fields: [departmentId], references: [id])
+  users        User[]
 
   @@map("roles")
 }
 
 model Permission {
   id          Int              @id @default(autoincrement())
-  module      String // leads, tasks, etc.
-  action      String // view, create, edit, delete, assign
-  scopeType   String // own, team, department, all
+  module      String
+  action      String
+  scopeType   String
   description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   roles       RolePermission[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@unique([module, action, scopeType])
   @@map("permissions")
@@ -63,17 +58,14 @@ model RolePermission {
   id           Int        @id @default(autoincrement())
   roleId       Int
   permissionId Int
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
 }
-
-// --- USER & AUTH ---
 
 model User {
   id           Int        @id @default(autoincrement())
@@ -81,66 +73,51 @@ model User {
   passwordHash String
   isActive     Boolean    @default(true)
   roleId       Int
-  role         Role       @relation(fields: [roleId], references: [id])
   departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   employee     Employee?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  department   Department @relation(fields: [departmentId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
 
   @@map("users")
 }
 
 model Employee {
-  id           Int        @id @default(autoincrement())
-  empId        String     @unique // Format: EMP001
-  userId       Int?       @unique
-  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName    String
-  lastName     String
-  email        String     @unique
-  phone        String?
-  departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id])
-  roleId       Int
-  role         Role       @relation(fields: [roleId], references: [id])
-
-  managerId Int?
-  manager   Employee?  @relation("ReportingLine", fields: [managerId], references: [id])
-  reportees Employee[] @relation("ReportingLine")
-
-  // Business Data Ownership
-  ownedLeads    Lead[] @relation("LeadOwner")
-  createdTasks  Task[] @relation("TaskCreator")
-  assignedTasks Task[] @relation("TaskAssignee")
-
-  assignmentLogsPerformed LeadAssignmentLog[] @relation("PerformedBy")
-  assignmentLogsReceived  LeadAssignmentLog[] @relation("AssignedTo")
-
-  // Follow-up and Notes
-  followUpsLogged FollowUpLog[] @relation("FollowUpsLogged")
-  notesAuthored   LeadNote[]    @relation("NotesAuthored")
-  eodReports      EodReport[]
-
-  // HR Data
-  attendanceLogs Attendance[]
-  leaveRequests  LeaveRequest[]
-  approvedLeaves LeaveRequest[] @relation("ApprovedLeaves")
-  activityLogs   ActivityLog[]
-
-  // Product Manager Assignment
-  managedProducts Product[] @relation("ProductManager")
-
-  // Project Manager Assignments
-  projectsAsRelationshipManager Project[] @relation("ProjectRelationshipManager")
-  projectsAsProjectManager      Project[] @relation("ProjectProjectManager")
-
-
-  joiningDate DateTime?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                            Int                 @id @default(autoincrement())
+  empId                         String              @unique
+  userId                        Int?                @unique
+  firstName                     String
+  lastName                      String
+  email                         String              @unique
+  phone                         String?
+  departmentId                  Int
+  roleId                        Int
+  managerId                     Int?
+  joiningDate                   DateTime?
+  isActive                      Boolean             @default(true)
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @updatedAt
+  activityLogs                  ActivityLog[]
+  attendanceLogs                Attendance[]
+  department                    Department          @relation(fields: [departmentId], references: [id])
+  manager                       Employee?           @relation("ReportingLine", fields: [managerId], references: [id])
+  reportees                     Employee[]          @relation("ReportingLine")
+  role                          Role                @relation(fields: [roleId], references: [id])
+  user                          User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eodReports                    EodReport[]
+  followUpsLogged               FollowUpLog[]       @relation("FollowUpsLogged")
+  assignmentLogsReceived        LeadAssignmentLog[] @relation("AssignedTo")
+  assignmentLogsPerformed       LeadAssignmentLog[] @relation("PerformedBy")
+  notesAuthored                 LeadNote[]          @relation("NotesAuthored")
+  ownedLeads                    Lead[]              @relation("LeadOwner")
+  approvedLeaves                LeaveRequest[]      @relation("ApprovedLeaves")
+  leaveRequests                 LeaveRequest[]
+  managedProducts               Product[]           @relation("ProductManager")
+  projectsAsProjectManager      Project[]           @relation("ProjectProjectManager")
+  projectsAsRelationshipManager Project[]           @relation("ProjectRelationshipManager")
+  assignedTasks                 Task[]              @relation("TaskAssignee")
+  createdTasks                  Task[]              @relation("TaskCreator")
 
   @@index([managerId])
   @@index([departmentId])
@@ -149,7 +126,238 @@ model Employee {
   @@map("employees")
 }
 
-// --- BUSINESS DATA ---
+model Lead {
+  id             String              @id @default(uuid())
+  name           String
+  email          String
+  phone          String?
+  company        String?
+  source         LeadSource
+  status         LeadStatus          @default(New)
+  notes          String?
+  ownerId        Int?
+  departmentId   Int
+  lastActivityAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  lostReason     String?
+  followUpLogs   FollowUpLog[]
+  assignmentLogs LeadAssignmentLog[]
+  leadNotes      LeadNote[]
+  department     Department          @relation(fields: [departmentId], references: [id])
+  owner          Employee?           @relation("LeadOwner", fields: [ownerId], references: [id])
+  project        Project?
+  tasks          Task[]
+
+  @@index([ownerId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+model Task {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  assigneeId      Int?
+  creatorId       Int?
+  dueDate         DateTime
+  priority        String
+  status          String
+  relatedToLeadId String?
+  projectId       Int?
+  productId       Int?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completionNote  String?
+  assignee        Employee? @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator         Employee? @relation("TaskCreator", fields: [creatorId], references: [id])
+  product         Product?  @relation(fields: [productId], references: [id])
+  project         Project?  @relation(fields: [projectId], references: [id])
+  lead            Lead?     @relation(fields: [relatedToLeadId], references: [id])
+
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@index([relatedToLeadId])
+  @@index([projectId])
+  @@index([productId])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model Product {
+  id               Int           @id @default(autoincrement())
+  name             String        @unique
+  description      String?
+  price            Float?        @default(0)
+  category         String?
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  productManagerId Int?
+  status           ProductStatus @default(Active)
+  productManager   Employee?     @relation("ProductManager", fields: [productManagerId], references: [id])
+  tasks            Task[]
+
+  @@index([productManagerId])
+  @@map("products")
+}
+
+model LeadAssignmentLog {
+  id            Int        @id @default(autoincrement())
+  leadId        String
+  performedById Int
+  assignedToId  Int
+  date          DateTime   @default(now())
+  leadStatus    LeadStatus
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  assignedTo    Employee   @relation("AssignedTo", fields: [assignedToId], references: [id])
+  lead          Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  performedBy   Employee   @relation("PerformedBy", fields: [performedById], references: [id])
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@map("lead_assignment_logs")
+}
+
+model FollowUpLog {
+  id            Int       @id @default(autoincrement())
+  leadId        String
+  employeeId    Int
+  scheduledDate DateTime
+  completedDate DateTime?
+  outcome       String?
+  nextAction    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  employee      Employee  @relation("FollowUpsLogged", fields: [employeeId], references: [id])
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([employeeId])
+  @@index([scheduledDate])
+  @@index([completedDate])
+  @@map("follow_up_logs")
+}
+
+model LeadNote {
+  id        Int      @id @default(autoincrement())
+  leadId    String
+  authorId  Int
+  content   String
+  isPrivate Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    Employee @relation("NotesAuthored", fields: [authorId], references: [id])
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([authorId])
+  @@map("lead_notes")
+}
+
+model EodReport {
+  id         Int      @id @default(autoincrement())
+  employeeId Int
+  date       DateTime @default(now())
+  content    String
+  leadsCount Int      @default(0)
+  tasksCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([date])
+  @@map("eod_reports")
+}
+
+model Project {
+  id                    Int           @id @default(autoincrement())
+  name                  String
+  description           String?
+  leadId                String?       @unique
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  projectManagerId      Int?
+  relationshipManagerId Int?
+  status                ProjectStatus @default(Active)
+  lead                  Lead?         @relation(fields: [leadId], references: [id])
+  projectManager        Employee?     @relation("ProjectProjectManager", fields: [projectManagerId], references: [id])
+  relationshipManager   Employee?     @relation("ProjectRelationshipManager", fields: [relationshipManagerId], references: [id])
+  tasks                 Task[]
+
+  @@index([status])
+  @@index([relationshipManagerId])
+  @@index([projectManagerId])
+  @@map("projects")
+}
+
+model Attendance {
+  id         Int              @id @default(autoincrement())
+  employeeId Int
+  date       DateTime         @default(now())
+  checkIn    DateTime         @default(now())
+  checkOut   DateTime?
+  status     AttendanceStatus @default(Present)
+  location   String?
+  notes      String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([date])
+  @@index([status])
+  @@map("attendance")
+}
+
+model LeaveRequest {
+  id           Int         @id @default(autoincrement())
+  employeeId   Int
+  startDate    DateTime
+  endDate      DateTime
+  type         LeaveType
+  reason       String
+  status       LeaveStatus @default(Pending)
+  approvedById Int?
+  managerNote  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  approvedBy   Employee?   @relation("ApprovedLeaves", fields: [approvedById], references: [id])
+  employee     Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("leave_requests")
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  module      String
+  action      String
+  entityId    String?
+  entityName  String?
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  employee    Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([module])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
 
 enum LeadStatus {
   New
@@ -185,264 +393,6 @@ enum ProductStatus {
   Discontinued
 }
 
-model Lead {
-  id         String     @id @default(uuid()) // SECURITY PLUG: UUID
-  name       String
-  email      String
-  phone      String?
-  company    String?
-  source     LeadSource
-  status     LeadStatus @default(New)
-  notes      String?
-  lostReason String? // PRD: Capture reason when lead is Lost
-
-  ownerId      Int?
-  owner        Employee?  @relation("LeadOwner", fields: [ownerId], references: [id])
-  departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id])
-
-  tasks          Task[]
-  assignmentLogs LeadAssignmentLog[]
-  followUpLogs   FollowUpLog[]
-  leadNotes      LeadNote[]
-  project        Project?
-
-  lastActivityAt DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@index([ownerId])
-  @@index([departmentId])
-  @@index([status])
-  @@index([source])
-  @@index([createdAt])
-  @@map("leads")
-}
-
-model Task {
-  id          String  @id @default(uuid()) // SECURITY PLUG: UUID
-  title       String
-  description String?
-
-  assigneeId Int?
-  assignee   Employee? @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  creatorId  Int?
-  creator    Employee? @relation("TaskCreator", fields: [creatorId], references: [id])
-
-  dueDate        DateTime
-  priority       String // High, Medium, Low
-  status         String // Pending, In Progress, Completed, Cancelled
-  completionNote String? // PRD: Capture note when task is Completed
-
-  relatedToLeadId String?
-  lead            Lead?   @relation(fields: [relatedToLeadId], references: [id], onDelete: SetNull) // FLOW FIX: SET NULL
-
-  // Expanded Relations
-  projectId Int?
-  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-
-  productId Int?
-  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([assigneeId])
-  @@index([creatorId])
-  @@index([relatedToLeadId])
-  @@index([projectId])
-  @@index([productId])
-  @@index([status])
-  @@index([priority])
-  @@index([dueDate])
-  @@map("tasks")
-}
-
-model Product {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique
-  description String? @db.Text
-  price       Float?  @default(0)
-  category    String? // e.g. "Marine Spare", "Engine Core"
-  status      ProductStatus @default(Active)
-  isActive    Boolean       @default(true)
-
-  // Product Manager Assignment
-  productManagerId Int?
-  productManager   Employee? @relation("ProductManager", fields: [productManagerId], references: [id])
-
-  tasks Task[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([productManagerId])
-  @@map("products")
-}
-
-model LeadAssignmentLog {
-  id     Int    @id @default(autoincrement())
-  leadId String
-  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  performedById Int
-  performedBy   Employee @relation("PerformedBy", fields: [performedById], references: [id])
-
-  assignedToId Int
-  assignedTo   Employee @relation("AssignedTo", fields: [assignedToId], references: [id])
-
-  date       DateTime   @default(now())
-  leadStatus LeadStatus
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([leadId])
-  @@index([assignedToId])
-  @@map("lead_assignment_logs")
-}
-
-// --- FOLLOW-UP TRACKING ---
-
-model FollowUpLog {
-  id     Int    @id @default(autoincrement())
-  leadId String
-  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  employeeId Int // Who logged the follow-up
-  employee   Employee @relation("FollowUpsLogged", fields: [employeeId], references: [id])
-
-  scheduledDate DateTime // When follow-up is scheduled
-  completedDate DateTime? // When it was actually completed (null if pending)
-
-  outcome    String? // Brief outcome of the follow-up
-  nextAction String? // Next action to take
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([leadId])
-  @@index([employeeId])
-  @@index([scheduledDate])
-  @@index([completedDate])
-  @@map("follow_up_logs")
-}
-
-// --- LEAD NOTES (Ownership-Aware) ---
-
-model LeadNote {
-  id     Int    @id @default(autoincrement())
-  leadId String
-  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  authorId Int // Employee who wrote this note
-  author   Employee @relation("NotesAuthored", fields: [authorId], references: [id])
-
-  content   String // The note text
-  isPrivate Boolean @default(false) // If true, only author can see
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([leadId])
-  @@index([authorId])
-  @@map("lead_notes")
-}
-
-// --- OPERATIONS & REPORTING ---
-
-model EodReport {
-  id         Int      @id @default(autoincrement())
-  employeeId Int
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  date       DateTime @default(now())
-  content    String // The daily summary
-  leadsCount Int      @default(0) // New leads handled
-  tasksCount Int      @default(0) // Tasks completed
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([employeeId])
-  @@index([date])
-  @@map("eod_reports")
-}
-
-model Project {
-  id          Int     @id @default(autoincrement())
-  name        String
-  description String? @db.Text
-  status      ProjectStatus @default(Active)
-
-  leadId String? @unique
-  lead   Lead?   @relation(fields: [leadId], references: [id])
-
-  // Manager Assignments
-  relationshipManagerId Int?
-  relationshipManager   Employee? @relation("ProjectRelationshipManager", fields: [relationshipManagerId], references: [id])
-  projectManagerId      Int?
-  projectManager        Employee? @relation("ProjectProjectManager", fields: [projectManagerId], references: [id])
-
-  tasks Task[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status])
-  @@index([relationshipManagerId])
-  @@index([projectManagerId])
-  @@map("projects")
-}
-
-model Attendance {
-  id         Int      @id @default(autoincrement())
-  employeeId Int
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  date     DateTime         @default(now())
-  checkIn  DateTime         @default(now())
-  checkOut DateTime?
-  status   AttendanceStatus @default(Present) // Present, Late, Half_Day, Absent
-
-  location String?
-  notes    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([employeeId])
-  @@index([date])
-  @@index([status])
-  @@map("attendance")
-}
-
-model LeaveRequest {
-  id         Int      @id @default(autoincrement())
-  employeeId Int
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  startDate DateTime
-  endDate   DateTime
-  type      LeaveType // Sick, Casual, Annual, Unpaid
-  reason    String
-  status    LeaveStatus @default(Pending) // Pending, Approved, Rejected
-
-  approvedById Int?
-  approvedBy   Employee? @relation("ApprovedLeaves", fields: [approvedById], references: [id])
-  managerNote  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([employeeId])
-  @@index([status])
-  @@index([startDate])
-  @@index([endDate])
-  @@map("leave_requests")
-}
-
 enum AttendanceStatus {
   Present
   Late
@@ -461,32 +411,4 @@ enum LeaveStatus {
   Pending
   Approved
   Rejected
-}
-
-model ActivityLog {
-  id Int @id @default(autoincrement())
-
-  // Actor
-  employeeId Int
-  employee   Employee @relation(fields: [employeeId], references: [id])
-
-  // Context
-  module String // leads, tasks, projects, etc.
-  action String // CREATE, UPDATE, DELETE, STATUS_CHANGE, ASSIGN
-
-  // Targeting
-  entityId   String? // UUID of Lead/Project or ID of Task/Product
-  entityName String? // Brief name for display (e.g., Lead Name)
-
-  // Data
-  description String // Human readable summary
-  metadata    Json? // Store old/new values if needed
-
-  createdAt DateTime @default(now())
-
-  @@index([employeeId])
-  @@index([module])
-  @@index([entityId])
-  @@index([createdAt])
-  @@map("activity_logs")
 }

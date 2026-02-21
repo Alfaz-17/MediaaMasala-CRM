@@ -603,26 +603,47 @@ async function main() {
       console.log('✅ Sample projects created with RM + PM assigned');
 
 
-      // 10. Create Sample Tasks
-      console.log('--- Seeding Sample Tasks ---');
-      const prodDev1 = await prisma.employee.findFirst({ where: { email: 'prod.dev1@test.com' } });
-      if (prodDev1) {
-        const taskTitle = 'Initial Product Setup';
-        const exists = await prisma.task.findFirst({ where: { title: taskTitle } });
-        if (!exists) {
-            await prisma.task.create({
+      // 11. Create Specific RBAC Test Scenario Cases
+      console.log('--- Seeding Specific RBAC Test Scenarios ---');
+      
+      // Scenario: Cross-Department PM/RM Relationship
+      const salesDeptObj = await prisma.department.findUnique({ where: { code: 'SALES' } });
+      const prodDeptObj = await prisma.department.findUnique({ where: { code: 'PRODUCT' } });
+
+      if (salesDeptObj && prodDeptObj) {
+          // Staff A1 (Sales RM)
+          const staffA1 = await createStaff('TEST-A1', 'RM-Staff', 'Sales', 'staff.a1@test.com', 'SALES_BDE', 'SALES', bm.id);
+          // Staff A2 (Sales Observer - should not see A1 leads)
+          const staffA2 = await createStaff('TEST-A2', 'Observer-Staff', 'Sales', 'staff.a2@test.com', 'SALES_BDE', 'SALES', bm.id);
+          // Staff B1 (Product PM)
+          const staffB1 = await createStaff('TEST-B1', 'PM-Staff', 'Product', 'staff.b1@test.com', 'PROD_PM', 'PRODUCT', prodPM1.id);
+
+          // Lead owned by A1
+          const leadA1 = await prisma.lead.create({
               data: {
-                title: taskTitle,
-                description: 'Set up the basic product catalog features.',
-                dueDate: new Date(Date.now() + 86400000 * 7),
-                priority: 'High',
-                status: 'Pending',
-                assigneeId: prodDev1.id,
-                creatorId: prodDev1.id
+                  name: 'Private Lead A1',
+                  email: 'private@a1.com',
+                  company: 'A1 Private Corp',
+                  source: 'Website',
+                  status: 'Prospect',
+                  ownerId: staffA1.id,
+                  departmentId: salesDeptObj.id
               }
-            });
-        }
-        console.log('✅ Sample tasks created/verified');
+          });
+
+          // Project linked to Lead A1, managed by B1 (PM) and A1 (RM)
+          await (prisma.project as any).create({
+              data: {
+                  name: 'Shared Project A1-B1',
+                  description: 'A project where Sales RM and Product PM collaborate.',
+                  status: 'Active',
+                  leadId: leadA1.id,
+                  projectManagerId: staffB1.id,
+                  relationshipManagerId: staffA1.id
+              }
+          });
+
+          console.log('✅ RBAC Test scenarios seeded successfully.');
       }
     }
 

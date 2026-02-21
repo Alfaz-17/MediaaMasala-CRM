@@ -82,8 +82,19 @@ export const createEmployee = async (req: Request, res: Response) => {
     firstName, lastName, email, phone, 
     departmentId, roleId, managerId, password 
   } = req.body;
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
 
   try {
+    // SCOPE CHECK: Only 'all' can create in any dept. 'department' can only create in their own.
+    if (scope !== 'all') {
+      if (scope === 'department' && Number(departmentId) !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied: You can only create employees for your own department' });
+      } else if (scope !== 'department') {
+        return res.status(403).json({ message: 'Access denied: Insufficient scope to create employees' });
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 0. Auto-generate EmpID
       const lastEmployee = await tx.employee.findFirst({
@@ -281,7 +292,12 @@ export const getDepartments = async (req: Request, res: Response) => {
 
 export const createDepartment = async (req: Request, res: Response) => {
   const { name, code, description } = req.body;
+  const scope = (req as any).permissionScope;
+
   try {
+    if (scope !== 'all') {
+      return res.status(403).json({ message: 'Access denied: Requires system-wide scope' });
+    }
     const department = await prisma.department.create({
       data: { name, code, description }
     });
@@ -294,7 +310,12 @@ export const createDepartment = async (req: Request, res: Response) => {
 export const updateDepartment = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, code, description, isActive } = req.body;
+  const scope = (req as any).permissionScope;
+
   try {
+    if (scope !== 'all') {
+      return res.status(403).json({ message: 'Access denied: Requires system-wide scope' });
+    }
     const department = await prisma.department.update({
       where: { id: Number(id) },
       data: { name, code, description, isActive }
@@ -330,7 +351,12 @@ export const getRoles = async (req: Request, res: Response) => {
 
 export const createRole = async (req: Request, res: Response) => {
   const { name, code, description, departmentId } = req.body;
+  const scope = (req as any).permissionScope;
+
   try {
+    if (scope !== 'all') {
+      return res.status(403).json({ message: 'Access denied: Requires system-wide scope' });
+    }
     const role = await prisma.role.create({
       data: { 
         name, 
@@ -348,7 +374,12 @@ export const createRole = async (req: Request, res: Response) => {
 export const updateRole = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, code, description, isActive, departmentId } = req.body;
+  const scope = (req as any).permissionScope;
+
   try {
+    if (scope !== 'all') {
+      return res.status(403).json({ message: 'Access denied: Requires system-wide scope' });
+    }
     const role = await prisma.role.update({
       where: { id: Number(id) },
       data: { 
@@ -391,8 +422,12 @@ export const getRolePermissions = async (req: Request, res: Response) => {
 export const syncRolePermissions = async (req: Request, res: Response) => {
   const { roleId } = req.params;
   const { permissionIds } = req.body;
+  const scope = (req as any).permissionScope;
 
   try {
+    if (scope !== 'all') {
+      return res.status(403).json({ message: 'Access denied: Requires system-wide scope' });
+    }
     await prisma.$transaction([
       prisma.rolePermission.deleteMany({ where: { roleId: Number(roleId) } }),
       prisma.rolePermission.createMany({

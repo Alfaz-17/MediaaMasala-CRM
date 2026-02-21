@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { getRecursiveReporteeIds } from '../utils/userUtils';
 
 const productInclude = {
   productManager: {
@@ -8,9 +9,23 @@ const productInclude = {
 };
 
 export const getProducts = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
   try {
+    let whereClause: any = { status: { not: 'Discontinued' } };
+
+    if (scope === 'own') {
+      whereClause.productManagerId = user.employeeId;
+    } else if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      whereClause.productManagerId = { in: [user.employeeId, ...reporteeIds] };
+    } else if (scope === 'department') {
+      whereClause.productManager = { departmentId: user.departmentId };
+    }
+
     const products = await (prisma as any).product.findMany({
-      where: { status: { not: 'Discontinued' } },
+      where: whereClause,
       include: productInclude,
       orderBy: { name: 'asc' }
     });
@@ -70,7 +85,30 @@ export const createProduct = async (req: Request, res: Response) => {
 export const updateProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, description, price, category, isActive, productManagerId, status } = req.body;
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
   try {
+    const existing = await (prisma as any).product.findUnique({ where: { id: parseInt(id) } });
+    if (!existing) return res.status(404).json({ message: 'Product not found' });
+
+    // SCOPE CHECK
+    if (scope === 'own' && existing.productManagerId !== user.employeeId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      if (existing.productManagerId !== user.employeeId && !reporteeIds.includes(existing.productManagerId)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+    if (scope === 'department' && existing.productManagerId) {
+      const mgr = await prisma.employee.findUnique({ where: { id: existing.productManagerId } });
+      if (mgr && mgr.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+
     const data: any = {};
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
@@ -93,7 +131,30 @@ export const updateProduct = async (req: Request, res: Response) => {
 
 export const deleteProduct = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
   try {
+    const existing = await (prisma as any).product.findUnique({ where: { id: parseInt(id) } });
+    if (!existing) return res.status(404).json({ message: 'Product not found' });
+
+    // SCOPE CHECK
+    if (scope === 'own' && existing.productManagerId !== user.employeeId) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      if (existing.productManagerId !== user.employeeId && !reporteeIds.includes(existing.productManagerId)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+    if (scope === 'department' && existing.productManagerId) {
+      const mgr = await prisma.employee.findUnique({ where: { id: existing.productManagerId } });
+      if (mgr && mgr.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+
     await (prisma as any).product.delete({
       where: { id: parseInt(id) }
     });
