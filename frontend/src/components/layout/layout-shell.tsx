@@ -2,7 +2,7 @@
 import { useSession, signOut } from "next-auth/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { ReactNode, useState } from "react"
+import { ReactNode, useState, useEffect } from "react"
 import { 
   LayoutDashboard, 
   Users, 
@@ -134,7 +134,14 @@ export function LayoutShell({ children }: LayoutShellProps) {
   const { data: session, status } = useSession()
   const { isAdmin, hasModule, role } = usePermissions()
   const user = session?.user as any
-  
+
+  // Auto-logout when the backend JWT expires
+  useEffect(() => {
+    if ((session as any)?.error === "TokenExpired") {
+      signOut({ callbackUrl: "/auth/login?error=SessionExpired" })
+    }
+  }, [session])
+
   if (pathname.startsWith("/auth")) {
     return <>{children}</>
   }

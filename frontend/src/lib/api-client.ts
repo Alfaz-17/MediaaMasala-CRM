@@ -19,6 +19,15 @@ async function getAuthHeaders() {
   }
 
   const session = await getSession();
+  
+  // If the session is flagged as expired, clear cache and return empty auth.
+  // The SessionGuard / LayoutShell will handle the signOut() call.
+  if ((session as any)?.error === "TokenExpired") {
+    cachedToken = null;
+    lastFetchTime = 0;
+    return { "Authorization": "", "Content-Type": "application/json" };
+  }
+
   cachedToken = (session?.user as any)?.accessToken || null;
   lastFetchTime = now;
   
@@ -84,22 +93,30 @@ export const apiClient = {
 
 import { toast } from "sonner"
 
-// ... imports
+let isSigningOut = false;
 
 async function handleResponse(response: Response, method?: string) {
   const isWriteRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method || '');
   
   if (!response.ok) {
-    if (response.status === 401) {
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth/login?error=SessionExpired"
+    if (response.status === 401 && typeof window !== "undefined") {
+      // Clear stale token cache immediately so no further requests use it
+      cachedToken = null;
+      lastFetchTime = 0;
+
+      // Prevent multiple concurrent signOut calls
+      if (!isSigningOut) {
+        isSigningOut = true;
+        const { signOut } = await import("next-auth/react");
+        signOut({ callbackUrl: "/auth/login?error=SessionExpired" });
       }
+      // Throw a silent error to stop the calling code in its tracks
+      throw new Error("Session expired");
     }
     
     const errorData = await response.json().catch(() => ({}))
     const errorMessage = errorData.message || `API Error: ${response.status}`
     
-    // Trigger Toast Notification for Errors
     toast.error(errorMessage, {
       description: response.status === 403 ? "You don't have permission to perform this action." : undefined
     })
@@ -109,7 +126,6 @@ async function handleResponse(response: Response, method?: string) {
 
   const data = await response.json()
 
-  // Proactive Success Toasts for write operations
   if (isWriteRequest) {
     toast.success(data.message || "Operation successful")
   }

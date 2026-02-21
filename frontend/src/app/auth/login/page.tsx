@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { signIn, useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sessionExpired = searchParams.get("error") === "SessionExpired"
 
   useEffect(() => {
     if (status === "authenticated" && session) {
@@ -66,6 +68,12 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {sessionExpired && (
+              <div className="rounded-md bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                <span className="text-base leading-none">⚠️</span>
+                <span>Your session has expired. Please sign in again to continue.</span>
+              </div>
+            )}
             {error && (
               <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
                 {error}

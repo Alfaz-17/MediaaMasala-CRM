@@ -1,9 +1,12 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+const JWT_EXPIRY_HOURS = 48;
+
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    maxAge: JWT_EXPIRY_HOURS * 60 * 60, // 48 hours — matches backend JWT expiry
   },
   providers: [
     CredentialsProvider({
@@ -52,7 +55,16 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = user.token;
         token.employeeId = user.employee?.id;
         token.employee = user.employee;
+        // Record when backend JWT expires
+        token.tokenExpiry = Date.now() + JWT_EXPIRY_HOURS * 60 * 60 * 1000;
+        delete token.error; // Clear any previous errors on fresh login
       }
+
+      // If the backend token has expired, flag it so the client can sign out
+      if (token.tokenExpiry && Date.now() > token.tokenExpiry) {
+        return { ...token, error: "TokenExpired" };
+      }
+
       return token;
     },
     async session({ session, token }: { session: any, token: any }) {
@@ -64,6 +76,8 @@ export const authOptions: NextAuthOptions = {
         session.user.employeeId = token.employeeId;
         session.user.employee = token.employee;
       }
+      // Expose error to client so SessionGuard can react
+      session.error = token.error;
       return session;
     },
   },
