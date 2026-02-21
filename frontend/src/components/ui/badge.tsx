@@ -17,6 +17,8 @@ const badgeVariants = cva(
         success: "border-transparent bg-green-500 text-white",
         warning: "border-transparent bg-amber-500 text-white",
         info: "border-transparent bg-blue-500 text-white",
+        won: "border-transparent bg-emerald-600 text-white font-bold",
+        hot: "border-transparent bg-rose-600 text-white animate-pulse",
       },
     },
     defaultVariants: {
@@ -26,7 +28,7 @@ const badgeVariants = cva(
 )
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | null
+  variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "won" | "hot" | null
 }
 
 function Badge({ className, variant, ...props }: BadgeProps) {

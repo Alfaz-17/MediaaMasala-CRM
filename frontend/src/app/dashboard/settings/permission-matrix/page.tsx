@@ -2,11 +2,12 @@
 
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { apiClient } from "@/lib/api-client"
+import { cn } from "@/lib/utils"
 import React from "react"
 
 interface Role {
@@ -31,7 +32,7 @@ interface Permission {
 }
 
 export default function PermissionMatrixPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [roles, setRoles] = useState<Role[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
@@ -49,7 +50,6 @@ export default function PermissionMatrixPage() {
       setPermissions(data.permissions)
       setMatrix(data.matrix)
       
-      // Fetch departments separately as they are not part of the matrix endpoint but needed for filter
       const deptsData = await apiClient.get("/admin/departments")
       setDepartments(deptsData)
     } catch (err) {
@@ -62,6 +62,31 @@ export default function PermissionMatrixPage() {
   useEffect(() => {
     if (session) fetchData()
   }, [session])
+
+  if (status === "loading" || (loading && roles.length === 0)) {
+    return (
+      <div className="space-y-6 max-w-7xl mx-auto p-6">
+        <div className="flex justify-between border-b pb-6">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <div className="border rounded-xl h-[600px] bg-muted/5 flex flex-col p-6 gap-4">
+          <div className="flex gap-4">
+             <Skeleton className="h-12 w-1/4" />
+             <Skeleton className="h-12 w-1/4" />
+             <Skeleton className="h-12 w-1/4" />
+             <Skeleton className="h-12 w-1/4" />
+          </div>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const togglePermission = (roleId: number, permId: number) => {
     setMatrix(prev => {
@@ -88,13 +113,10 @@ export default function PermissionMatrixPage() {
     }
   }
 
-  // Filter roles based on selected department
   const filteredRoles = roles.filter(role => 
     selectedDeptId === "all" || role.departmentId === parseInt(selectedDeptId)
   )
 
-  // Group permissions by module and action
-  // Result: { module: { action: [Permission records with different scopeTypes] } }
   const groupedMatrix = permissions.reduce((acc, perm) => {
     if (!acc[perm.module]) acc[perm.module] = {}
     if (!acc[perm.module][perm.action]) acc[perm.module][perm.action] = []
@@ -124,17 +146,21 @@ export default function PermissionMatrixPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm shadow-xl shadow-black/5">
+      <div className="h-0.5 w-full bg-muted overflow-hidden">
+        {loading && <div className="h-full bg-primary animate-pulse w-full" />}
+      </div>
+
+      <div className="overflow-auto max-h-[calc(100vh-250px)] rounded-xl border border-border/40 bg-card/50 backdrop-blur-sm shadow-lg shadow-black/5">
         <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-muted/30 border-b border-border/40">
-              <th className="p-6 text-left min-w-[320px]">
+          <thead className="sticky top-0 z-20">
+            <tr className="bg-background/95 backdrop-blur border-b border-border/40 ring-1 ring-border/10">
+              <th className="p-6 text-left min-w-[320px] bg-background/95 border-r border-border/20">
                 <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest px-1">Module & Action</span>
               </th>
               {filteredRoles.map(role => (
-                <th key={role.id} className="p-6 text-center min-w-[180px] border-l border-border/10">
+                <th key={role.id} className="p-6 text-center min-w-[180px] border-l border-border/10 text-foreground font-bold text-xs uppercase tracking-tight">
                   <div className="space-y-4">
-                    <p className="font-bold text-xs text-foreground tracking-tight px-2">{role.name}</p>
+                    <p>{role.name}</p>
                     <Button 
                       size="sm" 
                       variant="outline" 
@@ -162,7 +188,7 @@ export default function PermissionMatrixPage() {
                 </tr>
                 {Object.entries(actions).map(([action, perms]) => (
                   <tr key={action} className="group hover:bg-muted/20 transition-colors">
-                    <td className="p-6">
+                    <td className="p-6 bg-background/95 border-r border-border/20">
                       <div className="flex flex-col">
                         <span className="font-bold text-foreground/90 text-[13px] tracking-tight mb-1 capitalize">
                           {action.replace('-', ' ')} {module}
@@ -179,17 +205,16 @@ export default function PermissionMatrixPage() {
                         <td key={role.id} className="p-6 text-center border-l border-border/10">
                           <div className="flex flex-col items-center gap-3">
                             <select
-                              className="w-full max-w-[140px] text-[10px] font-bold bg-muted/40 border-border/30 rounded-md p-1.5 focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer appearance-none text-center"
-                              value={activePermIdForRole || ""}
-                              onChange={(e) => {
-                                const newId = parseInt(e.target.value)
-                                // Remove old ID for this module/action and add new one
-                                setMatrix(prev => {
-                                  const otherPerms = prev[role.id]?.filter(id => !perms.some(p => p.id === id)) || []
-                                  const newPerms = newId ? [...otherPerms, newId] : otherPerms
-                                  return { ...prev, [role.id]: newPerms }
-                                })
-                              }}
+                               className="w-full max-w-[140px] text-[10px] font-bold bg-muted/40 border-border/30 rounded-md p-1.5 focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer appearance-none text-center"
+                               value={activePermIdForRole || ""}
+                               onChange={(e) => {
+                                 const newId = parseInt(e.target.value)
+                                 setMatrix(prev => {
+                                   const otherPerms = prev[role.id]?.filter(id => !perms.some(p => p.id === id)) || []
+                                   const newPerms = newId ? [...otherPerms, newId] : otherPerms
+                                   return { ...prev, [role.id]: newPerms }
+                                 })
+                               }}
                             >
                               <option value="">🚫 No Access</option>
                               {perms.map(p => (
