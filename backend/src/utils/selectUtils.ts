@@ -21,6 +21,9 @@ export const employeeSelect = {
   manager: {
     select: { id: true, firstName: true, lastName: true }
   },
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
   user: {
     select: { isActive: true }
   }
@@ -55,9 +58,12 @@ export const projectSelect = {
   id: true,
   name: true,
   description: true,
-  startDate: true,
-  endDate: true,
   status: true,
+  leadId: true,
+  projectManagerId: true,
+  relationshipManagerId: true,
+  createdAt: true,
+  updatedAt: true,
   lead: { select: { id: true, name: true, company: true } },
   projectManager: { select: { id: true, firstName: true, lastName: true } },
   relationshipManager: { select: { id: true, firstName: true, lastName: true } },
@@ -76,6 +82,10 @@ export const taskSelect = {
   relatedToLeadId: true,
   projectId: true,
   productId: true,
+  assigneeId: true,
+  creatorId: true,
+  createdAt: true,
+  updatedAt: true,
   assignee: { select: employeeSelectMinimal },
   creator: { select: employeeSelectMinimal },
   lead: { select: { id: true, name: true, company: true, status: true } },
@@ -91,6 +101,9 @@ export const productSelect = {
   category: true,
   status: true,
   isActive: true,
+  productManagerId: true,
+  createdAt: true,
+  updatedAt: true,
   productManager: {
     select: {
       id: true,
