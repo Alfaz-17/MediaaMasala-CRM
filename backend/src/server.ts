@@ -17,6 +17,15 @@ import leaveRoutes from './routes/leaves';
 import reportRoutes from './routes/reports';
 import productRoutes from './routes/products';
 import { errorHandler } from './middleware/errorHandler';
+import rateLimit from 'express-rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 dotenv.config();
 
@@ -47,6 +56,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use(limiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadRoutes);

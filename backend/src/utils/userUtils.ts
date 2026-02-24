@@ -9,10 +9,11 @@ export async function getRecursiveReporteeIds(managerId: number): Promise<number
   try {
     const result = await prisma.$queryRaw<Array<{ id: number }>>`
       WITH RECURSIVE subordinates AS (
-        SELECT id FROM employees WHERE "managerId" = ${managerId}
+        SELECT id FROM employees WHERE "managerId" = ${managerId} AND "isActive" = true
         UNION
         SELECT e.id FROM employees e
         INNER JOIN subordinates s ON s.id = e."managerId"
+        WHERE e."isActive" = true
       )
       SELECT id FROM subordinates;
     `;

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/logger';
 import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getModuleWhereClause } from '../utils/permissionUtils';
 
 const employeeSelect = {
   id: true,
@@ -22,18 +23,10 @@ export const getLeads = async (req: Request, res: Response) => {
 
   try {
     const { departmentId, ownerId, recursive } = req.query;
-    let whereClause: any = {};
-
     const isRecursive = recursive === 'true';
-
-    if (scope === 'own') {
-      whereClause.ownerId = user.employeeId;
-    } else if (scope === 'department') {
-      whereClause.departmentId = user.departmentId;
-    } else if (scope === 'team') {
-      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-      whereClause.ownerId = { in: [user.employeeId, ...reporteeIds] };
-    }
+    // Initial RBAC Scope using Centralized Utility
+    let whereClause = await getModuleWhereClause(user, 'leads');
+    if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
 
     // Apply additional filters if scope allows
     if (departmentId) {
@@ -110,11 +103,21 @@ export const getLeads = async (req: Request, res: Response) => {
 export const getLeadById = async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = (req as any).user;
-  const scope = (req as any).permissionScope;
 
   try {
-    const lead = await prisma.lead.findUnique({
-      where: { id },
+    const scope = (req as any).permissionScope;
+
+    // 1. Apply RBAC Scope using Centralized Utility
+    const whereClause = await getModuleWhereClause(user, 'leads');
+    if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
+
+    const lead = await prisma.lead.findFirst({
+      where: {
+        AND: [
+          { id },
+          whereClause
+        ]
+      },
       select: {
         id: true,
         name: true,
@@ -171,21 +174,7 @@ export const getLeadById = async (req: Request, res: Response) => {
     });
 
     if (!lead) {
-      return res.status(404).json({ message: 'Sale not found' });
-    }
-
-    // RBAC: Check scope
-    if (scope === 'own' && lead.ownerId !== user.employeeId) {
-      return res.status(403).json({ message: 'Access denied: This sale does not belong to you' });
-    }
-    if (scope === 'department' && lead.departmentId !== user.departmentId) {
-      return res.status(403).json({ message: 'Access denied: Sale belongs to another department' });
-    }
-    if (scope === 'team') {
-      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-      if (lead.ownerId !== user.employeeId && !reporteeIds.includes(lead.ownerId as number)) {
-        return res.status(403).json({ message: 'Access denied: Sale is not owned by you or your team' });
-      }
+      return res.status(404).json({ message: 'Sale not found or access denied' });
     }
 
     // Fetch project separately if needed (to bypass relation lint)
@@ -209,11 +198,24 @@ export const createLead = async (req: Request, res: Response) => {
 
     // RBAC: Validate Department/Owner
     let finalDepartmentId = departmentId ? Number(departmentId) : user.departmentId;
-    let finalOwnerId = user.employeeId;
+    let finalOwnerId = req.body.ownerId ? Number(req.body.ownerId) : user.employeeId;
 
-    if (scope === 'department' || scope === 'own') {
-      // Force user's department if they don't have 'all' scope
+    if (scope === 'own') {
       finalDepartmentId = user.departmentId;
+      finalOwnerId = user.employeeId;
+    } else if (scope === 'team') {
+       finalDepartmentId = user.departmentId;
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+       const teamIds = [user.employeeId, ...reporteeIds];
+       if (!teamIds.includes(finalOwnerId)) {
+         return res.status(403).json({ message: 'Access denied: You can only create leads for your team' });
+       }
+    } else if (scope === 'department') {
+       finalDepartmentId = user.departmentId;
+       const ownerEmp = await prisma.employee.findUnique({ where: { id: finalOwnerId } });
+       if (!ownerEmp || ownerEmp.departmentId !== user.departmentId) {
+         return res.status(403).json({ message: 'Access denied: You can only create leads within your department' });
+       }
     }
 
     const lead = await prisma.lead.create({
@@ -228,6 +230,7 @@ export const createLead = async (req: Request, res: Response) => {
         ownerId: finalOwnerId
       }
     });
+
 
     await logActivity({
       employeeId: user.employeeId,
@@ -417,8 +420,24 @@ export const addFollowUp = async (req: Request, res: Response) => {
 };
 
 export const getEmployees = async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
   try {
+    let whereClause: any = { isActive: true }; // Security: Only show active employees
+
+    // 1. Apply RBAC Scope
+    if (scope === 'own') {
+      whereClause.id = user.employeeId;
+    } else if (scope === 'department') {
+      whereClause.departmentId = user.departmentId;
+    } else if (scope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      whereClause.id = { in: [user.employeeId, ...reporteeIds] };
+    }
+
     const employees = await prisma.employee.findMany({
+      where: whereClause,
       select: employeeSelect
     });
     res.json(employees);
@@ -437,10 +456,9 @@ export const assignLead = async (req: Request, res: Response) => {
     const lead = await prisma.lead.findUnique({ where: { id } });
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
 
-    // SCOPE CHECK (For Assignment, usually wider scope? But let's restrict to view scope)
-    // If I can't view it, I can't assign it.
+    // 1. Check if user can VIEW this lead (current scope from checkPermission)
     if (scope === 'own' && lead.ownerId !== user.employeeId) {
-      return res.status(403).json({ message: 'Access denied' });
+      return res.status(403).json({ message: 'Access denied: You cannot view this lead' });
     }
     if (scope === 'department' && lead.departmentId !== user.departmentId) {
       return res.status(403).json({ message: 'Access denied' });
@@ -451,6 +469,40 @@ export const assignLead = async (req: Request, res: Response) => {
          return res.status(403).json({ message: 'Access denied' });
        }
     }
+
+    // 2. Check ASSIGN permission and scope for the target assignee
+    const permissions = (req as any).user.permissions || [];
+    const assignPerm = permissions.find((p: any) => p.module === 'leads' && p.action === 'assign');
+    
+    if (!assignPerm) {
+      return res.status(403).json({ message: 'Access denied: You do not have permission to assign leads' });
+    }
+
+    const targetAssigneeId = Number(assigneeId);
+    const assignScope = assignPerm.scope;
+
+    if (assignScope === 'own' && targetAssigneeId !== user.employeeId) {
+      return res.status(403).json({ message: 'Access denied: You can only assign leads to yourself' });
+    }
+
+    if (assignScope === 'team') {
+      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+      const teamIds = [user.employeeId, ...reporteeIds];
+      if (!teamIds.includes(targetAssigneeId)) {
+        return res.status(403).json({ message: 'Access denied: You can only assign leads to members of your team' });
+      }
+    }
+
+    if (assignScope === 'department') {
+       const assigneeEmp = await prisma.employee.findUnique({ 
+         where: { id: targetAssigneeId },
+         select: { departmentId: true }
+       });
+       if (!assigneeEmp || assigneeEmp.departmentId !== user.departmentId) {
+         return res.status(403).json({ message: 'Access denied: You can only assign leads within your department' });
+       }
+    }
+
 
     const updatedLead = await prisma.lead.update({
       where: { id },
@@ -521,6 +573,10 @@ export const convertToProject = async (req: Request, res: Response) => {
   const { projectName, description } = req.body;
   const user = (req as any).user;
   const scope = (req as any).permissionScope;
+
+  if (scope !== 'all') {
+    return res.status(403).json({ message: 'Access denied: Only users with ALL scope can convert leads to projects' });
+  }
 
   try {
     const lead = await prisma.lead.findUnique({ 

@@ -169,7 +169,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
     return hasModule(item.module)
   })
 
-  const canSeeSettings = isAdmin
+  const canSeeSettings = isAdmin || hasModule("settings")
 
   const handleLogout = async () => {
     try {

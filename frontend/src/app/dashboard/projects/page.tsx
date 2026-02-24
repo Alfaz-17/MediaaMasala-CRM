@@ -320,7 +320,16 @@ export default function ProjectsPage() {
                               <SelectTrigger><SelectValue placeholder="Select RM" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">None</SelectItem>
-                                {employees.map((emp: any) => (
+                                {employees
+                                  .filter((emp: any) => {
+                                      const userPerms = session?.user as any;
+                                      const scope = userPerms?.permissions?.find((p: any) => p.module === 'projects' && (p.action === 'create' || p.action === 'edit'))?.scope;
+                                      if (scope === 'all' || !scope) return true;
+                                      if (scope === 'department') return emp.departmentId === userPerms?.departmentId;
+                                      if (scope === 'own') return emp.id === userPerms?.employeeId;
+                                      return true;
+                                  })
+                                  .map((emp: any) => (
                                   <SelectItem key={emp.id} value={String(emp.id)}>
                                     {emp.firstName} {emp.lastName} — {emp.role?.name}
                                   </SelectItem>
@@ -334,7 +343,16 @@ export default function ProjectsPage() {
                               <SelectTrigger><SelectValue placeholder="Select PM" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">None</SelectItem>
-                                {employees.map((emp: any) => (
+                                {employees
+                                  .filter((emp: any) => {
+                                      const userPerms = session?.user as any;
+                                      const scope = userPerms?.permissions?.find((p: any) => p.module === 'projects' && (p.action === 'create' || p.action === 'edit'))?.scope;
+                                      if (scope === 'all' || !scope) return true;
+                                      if (scope === 'department') return emp.departmentId === userPerms?.departmentId;
+                                      if (scope === 'own') return emp.id === userPerms?.employeeId;
+                                      return true;
+                                  })
+                                  .map((emp: any) => (
                                   <SelectItem key={emp.id} value={String(emp.id)}>
                                     {emp.firstName} {emp.lastName} — {emp.role?.name}
                                   </SelectItem>
@@ -406,17 +424,22 @@ export default function ProjectsPage() {
                          </Button>
                        </DropdownMenuTrigger>
                        <DropdownMenuContent align="end" className="w-40 rounded-xl" onClick={(e) => e.stopPropagation()}>
-                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingProject(project); setIsModalOpen(true); }} className="cursor-pointer">
-                           <Pencil className="mr-2 h-3.5 w-3.5" /> Edit project
-                         </DropdownMenuItem>
-                         <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer" onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }} disabled={deletingId === project.id}>
-                           {deletingId === project.id ? (
-                             <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                           ) : (
-                             <Trash2 className="mr-2 h-3.5 w-3.5" />
-                           )}
-                           Delete project
-                         </DropdownMenuItem>
+      {hasPermission("projects", "edit") ? (
+        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingProject(project); setIsModalOpen(true); }} className="cursor-pointer">
+          <Pencil className="mr-2 h-3.5 w-3.5" /> Edit project
+        </DropdownMenuItem>
+      ) : null}
+      {hasPermission("projects", "delete") ? (
+        <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer" onClick={(e) => { e.stopPropagation(); handleDelete(project.id); }} disabled={deletingId === project.id}>
+          {deletingId === project.id ? (
+            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Trash2 className="mr-2 h-3.5 w-3.5" />
+          )}
+          Delete project
+        </DropdownMenuItem>
+      ) : null}
+
                        </DropdownMenuContent>
                      </DropdownMenu>
                   </div>
@@ -498,17 +521,20 @@ export default function ProjectsPage() {
                   Showing {contextTasks.length} tasks associated with this project.
                 </DialogDescription>
               </DialogHeader>
-              <div className="flex justify-end mt-4">
-                <Button 
-                  size="sm" 
-                  className="h-9 text-[10px] font-bold uppercase tracking-widest rounded-xl px-4"
-                  onClick={() => {
-                    router.push(`/dashboard/tasks/new?projectId=${viewTasksProject?.id}`)
-                  }}
-                >
-                  <Plus className="mr-2 h-3.5 w-3.5" /> Add Task
-                </Button>
-              </div>
+              {hasPermission("tasks", "create") && (
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    size="sm" 
+                    className="h-9 text-[10px] font-bold uppercase tracking-widest rounded-xl px-4"
+                    onClick={() => {
+                      router.push(`/dashboard/tasks/new?projectId=${viewTasksProject?.id}`)
+                    }}
+                  >
+                    <Plus className="mr-2 h-3.5 w-3.5" /> Add Task
+                  </Button>
+                </div>
+              )}
+
             </div>
             
             <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-border">

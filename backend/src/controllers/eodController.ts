@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getModuleWhereClause } from '../utils/permissionUtils';
 
 export const submitEod = async (req: Request, res: Response) => {
   const { content, leadsCount, tasksCount, date } = req.body;
@@ -34,16 +35,9 @@ export const getEodReports = async (req: Request, res: Response) => {
 
   try {
     const { departmentId, employeeId } = req.query;
-    let whereClause: any = {};
-
-    if (scope === 'own') {
-      whereClause.employeeId = user.employeeId;
-    } else if (scope === 'department') {
-      whereClause.employee = { departmentId: user.departmentId };
-    } else if (scope === 'team') {
-        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-        whereClause.employeeId = { in: [user.employeeId, ...reporteeIds] };
-    }
+    // 1. Apply RBAC Scope using Centralized Utility
+    let whereClause = await getModuleWhereClause(user, 'eod');
+    if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
 
     // Apply additional filters if scope allows
     if (departmentId) {

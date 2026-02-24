@@ -149,6 +149,7 @@ router.get('/me', async (req, res) => {
     });
 
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.isActive) return res.status(401).json({ message: 'Account is disabled' });
 
     const employee = await prisma.employee.findUnique({ where: { userId: user.id } });
 

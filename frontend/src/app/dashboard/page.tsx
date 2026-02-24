@@ -63,7 +63,7 @@ function DashboardSkeleton() {
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const { hasModule, hasPermission, isLoading: permissionsLoading } = usePermissions()
+  const { hasModule, hasPermission, getModuleScope, isLoading: permissionsLoading } = usePermissions()
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats", session?.user?.email],
@@ -124,9 +124,14 @@ export default function DashboardPage() {
       {/* Utilitarian KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {canViewLeads && (
-          <Card className="shadow-none border hover:border-primary/50 transition-none">
+          <Card className="shadow-none border hover:border-primary/50 transition-none relative overflow-hidden group">
              <CardHeader className="pb-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Leads</p>
+                <div className="flex justify-between items-center pr-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Leads</p>
+                  <span className="text-[8px] font-black uppercase tracking-tighter bg-primary/10 px-1.5 py-0.5 rounded text-primary opacity-60 group-hover:opacity-100 transition-opacity">
+                    {getModuleScope("leads")}
+                  </span>
+                </div>
              </CardHeader>
              <CardContent>
                 <div className="text-2xl font-bold text-foreground">{stats?.global.totalLeads || 0}</div>
@@ -135,9 +140,14 @@ export default function DashboardPage() {
         )}
 
         {canViewTasks && (
-          <Card className="shadow-none border hover:border-blue-500/50 transition-none">
+          <Card className="shadow-none border hover:border-blue-500/50 transition-none relative overflow-hidden group">
              <CardHeader className="pb-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Daily Tasks</p>
+                <div className="flex justify-between items-center pr-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Daily Tasks</p>
+                  <span className="text-[8px] font-black uppercase tracking-tighter bg-blue-500/10 px-1.5 py-0.5 rounded text-blue-500 opacity-60 group-hover:opacity-100 transition-opacity">
+                    {getModuleScope("tasks")}
+                  </span>
+                </div>
              </CardHeader>
              <CardContent>
                 <div className="text-2xl font-bold text-foreground">{stats?.global.tasksDueToday || 0}</div>
@@ -146,9 +156,14 @@ export default function DashboardPage() {
         )}
 
         {canViewTasks && (
-          <Card className="shadow-none border border-destructive/20 hover:border-destructive/50 transition-none bg-destructive/5">
+          <Card className="shadow-none border border-destructive/20 hover:border-destructive/50 transition-none bg-destructive/5 relative overflow-hidden group">
              <CardHeader className="pb-1">
-                <p className="text-[10px] font-bold text-destructive uppercase tracking-wider">Overdue</p>
+                <div className="flex justify-between items-center pr-1">
+                  <p className="text-[10px] font-bold text-destructive uppercase tracking-wider">Overdue</p>
+                  <span className="text-[8px] font-black uppercase tracking-tighter bg-destructive/10 px-1.5 py-0.5 rounded text-destructive opacity-60 group-hover:opacity-100 transition-opacity">
+                    {getModuleScope("tasks")}
+                  </span>
+                </div>
              </CardHeader>
              <CardContent>
                 <div className="text-2xl font-bold text-destructive">{stats?.global.overdueTasks || 0}</div>

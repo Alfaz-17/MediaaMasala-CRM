@@ -24,13 +24,19 @@ export function usePermissions() {
   const permissions = data?.permissions || user?.permissions || []
   const role = data?.user?.role || user?.role
 
-  const hasPermission = useCallback((module: string, action: string) => {
+  const hasPermission = useCallback((module: string, action: string, scope?: string) => {
     if (role === 'ADMIN') return true
     if (role === 'UNASSIGNED') return false
     
     return permissions.some(
-      (p: any) => p.module === module && p.action === action
+      (p: any) => p.module === module && p.action === action && (!scope || p.scopeType === scope)
     )
+  }, [role, permissions])
+
+  const getModuleScope = useCallback((module: string) => {
+    if (role === 'ADMIN') return 'all'
+    const perm = permissions.find((p: any) => p.module === module && p.action === 'view')
+    return perm?.scopeType || 'own'
   }, [role, permissions])
 
   const hasModule = useCallback((module: string) => {
@@ -43,6 +49,7 @@ export function usePermissions() {
   return useMemo(() => ({
     hasPermission,
     hasModule,
+    getModuleScope,
     role,
     isAdmin: role === 'ADMIN',
     refreshPermissions: refetch,

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getModuleWhereClause } from '../utils/permissionUtils';
 
 const productInclude = {
   productManager: {
@@ -13,16 +14,12 @@ export const getProducts = async (req: Request, res: Response) => {
   const scope = (req as any).permissionScope;
 
   try {
-    let whereClause: any = { status: { not: 'Discontinued' } };
-
-    if (scope === 'own') {
-      whereClause.productManagerId = user.employeeId;
-    } else if (scope === 'team') {
-      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-      whereClause.productManagerId = { in: [user.employeeId, ...reporteeIds] };
-    } else if (scope === 'department') {
-      whereClause.productManager = { departmentId: user.departmentId };
-    }
+    // 1. Apply RBAC Scope using Centralized Utility
+    let whereClause = await getModuleWhereClause(user, 'products');
+    if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
+    
+    // Maintain Discontinued filter
+    whereClause.status = { not: 'Discontinued' };
 
     const products = await (prisma as any).product.findMany({
       where: whereClause,
@@ -37,9 +34,20 @@ export const getProducts = async (req: Request, res: Response) => {
 
 export const getProductById = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
   try {
-    const product = await (prisma as any).product.findUnique({
-      where: { id: parseInt(id) },
+    const whereClause = await getModuleWhereClause(user, 'products');
+    if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
+
+    const product = await (prisma as any).product.findFirst({
+      where: {
+        AND: [
+          { id: parseInt(id) },
+          whereClause
+        ]
+      },
       include: {
         ...productInclude,
         tasks: {
@@ -55,7 +63,9 @@ export const getProductById = async (req: Request, res: Response) => {
         }
       }
     });
-    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    if (!product) return res.status(404).json({ message: 'Product not found or access denied' });
+
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching product' });
@@ -64,7 +74,35 @@ export const getProductById = async (req: Request, res: Response) => {
 
 export const createProduct = async (req: Request, res: Response) => {
   const { name, description, price, category, productManagerId, status } = req.body;
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
+  if (scope !== 'all') {
+    return res.status(403).json({ message: 'Access denied: Only users with ALL scope can add new products to the catalog' });
+  }
+
   try {
+    const pmId = productManagerId ? parseInt(productManagerId) : null;
+
+    // SCOPE CHECK for PM assignment
+    if (pmId) {
+       if (scope === 'own' && pmId !== user.employeeId) {
+         return res.status(403).json({ message: 'Access denied: Can only manage your own products' });
+       }
+       if (scope === 'team') {
+          const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+          if (pmId !== user.employeeId && !reporteeIds.includes(pmId)) {
+            return res.status(403).json({ message: 'Access denied: PM not in your team' });
+          }
+       }
+       if (scope === 'department') {
+          const mgr = await prisma.employee.findUnique({ where: { id: pmId } });
+          if (mgr && mgr.departmentId !== user.departmentId) {
+            return res.status(403).json({ message: 'Access denied: PM from another department' });
+          }
+       }
+    }
+
     const product = await (prisma as any).product.create({
       data: {
         name,
@@ -72,11 +110,12 @@ export const createProduct = async (req: Request, res: Response) => {
         price,
         category,
         status: status || 'Active',
-        productManagerId: productManagerId ? parseInt(productManagerId) : null
+        productManagerId: pmId
       },
       include: productInclude
     });
     res.status(201).json(product);
+
   } catch (error) {
     res.status(500).json({ message: 'Error creating product' });
   }

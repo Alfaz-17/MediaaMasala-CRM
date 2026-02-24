@@ -130,7 +130,26 @@ export default function PermissionMatrixPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">App Permissions</h1>
           <p className="text-muted-foreground text-xs font-medium mt-1">Define exactly what each job role can see and do in the system.</p>
+          <div className="flex gap-4 mt-3">
+             <div className="flex items-center gap-1.5 opacity-60">
+                <Badge variant="outline" className="text-[8px] h-4">OWN</Badge>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Self only</span>
+             </div>
+             <div className="flex items-center gap-1.5 opacity-60">
+                <Badge variant="outline" className="text-[8px] h-4">TEAM</Badge>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Direct Reportees</span>
+             </div>
+             <div className="flex items-center gap-1.5 opacity-60">
+                <Badge variant="outline" className="text-[8px] h-4">DEPT</Badge>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">Same Department</span>
+             </div>
+             <div className="flex items-center gap-1.5 opacity-60">
+                <Badge variant="outline" className="text-[8px] h-4">ALL</Badge>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase">System-wide</span>
+             </div>
+          </div>
         </div>
+
         <div className="flex items-center gap-3">
           <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider">Filter Dept:</Label>
           <select
@@ -216,17 +235,38 @@ export default function PermissionMatrixPage() {
                                  })
                                }}
                             >
-                              <option value="">🚫 No Access</option>
-                              {perms.map(p => (
-                                <option key={p.id} value={p.id} className="font-bold">
-                                  {p.scopeType.toUpperCase()}
-                                </option>
-                              ))}
+                               <option value="">🚫 No Access</option>
+                               {perms.sort((a, b) => {
+                                 const order = ['own', 'team', 'department', 'all'];
+                                 return order.indexOf(a.scopeType) - order.indexOf(b.scopeType);
+                               }).map(p => (
+                                 <option key={p.id} value={p.id} className="font-bold">
+                                   {p.scopeType.toUpperCase()}
+                                 </option>
+                               ))}
+
                             </select>
-                            {activePermIdForRole && (
-                              <Badge className="h-[14px] text-[7px] font-black uppercase tracking-tighter bg-emerald-500/10 text-emerald-600 border-none shadow-none">
-                                ENABLED
-                              </Badge>
+                            {activePermIdForRole ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge className="h-[14px] text-[7px] font-black uppercase tracking-tighter bg-emerald-500/10 text-emerald-600 border-none shadow-none">
+                                  ENABLED
+                                </Badge>
+                                <span className="text-[8px] text-muted-foreground/60 italic font-medium max-w-[120px] leading-tight">
+                                  {(() => {
+                                    const scope = perms.find(p => p.id === activePermIdForRole)?.scopeType;
+                                    switch(scope) {
+                                      case 'own': return 'Individual desktop focus';
+                                      case 'team': return 'Recursive team oversight';
+                                      case 'department': return 'HOD department view';
+                                      case 'all': return 'CEO/Admin global visibility';
+                                      case 'assigned': return 'Specific project roles';
+                                      default: return '';
+                                    }
+                                  })()}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[8px] text-muted-foreground/30 italic font-medium">Locked access</span>
                             )}
                           </div>
                         </td>

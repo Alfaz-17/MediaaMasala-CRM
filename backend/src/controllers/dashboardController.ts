@@ -2,52 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { startOfDay, endOfDay } from 'date-fns';
 import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getModuleWhereClause } from '../utils/permissionUtils';
 
-// Helper to determine the filter based on module name and permission scope
-// Optimization: Cache team IDs per request if needed
-const getModuleWhere = async (user: any, moduleName: string, cachedTeamIds?: number[]): Promise<any> => {
-  if (user.role === 'ADMIN') return {};
-
-  const permission = user.permissions?.find(
-    (p: any) => p.module === moduleName && (p.action === 'view' || p.action === 'read')
-  );
-
-  if (!permission) return null; // Explicitly deny if no view permission
-
-  const scope = permission.scope;
-
-  if (scope === 'own') {
-    return moduleName === 'leads' ? { ownerId: user.employeeId } : { assigneeId: user.employeeId };
-  }
-
-  if (scope === 'department') {
-    if (moduleName === 'leads') return { departmentId: user.departmentId };
-    return {
-      OR: [
-        { assignee: { departmentId: user.departmentId } },
-        { creator: { departmentId: user.departmentId } }
-      ]
-    };
-  }
-
-  if (scope === 'team') {
-    let teamIds = cachedTeamIds;
-    if (!teamIds) {
-      teamIds = await getRecursiveReporteeIds(user.employeeId);
-      teamIds = [user.employeeId, ...teamIds];
-    }
-
-    if (moduleName === 'leads') return { ownerId: { in: teamIds } };
-    return {
-      OR: [
-        { assigneeId: { in: teamIds } },
-        { creatorId: { in: teamIds } }
-      ]
-    };
-  }
-
-  return {}; // 'all'
-};
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   const user = (req as any).user;
@@ -57,14 +13,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const startOfToday = startOfDay(today);
     const endOfToday = endOfDay(today);
 
-    let teamIds: number[] | undefined;
-    if (user.role !== 'ADMIN') {
-      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-      teamIds = [user.employeeId, ...reporteeIds];
-    }
-
-    const leadsWhere = await getModuleWhere(user, 'leads', teamIds);
-    const tasksWhere = await getModuleWhere(user, 'tasks', teamIds);
+    const leadsWhere = await getModuleWhereClause(user, 'leads');
+    const tasksWhere = await getModuleWhereClause(user, 'tasks');
 
     const [leadsCount, tasksDueToday, overdueTasks, myLeads, myTasksDueToday] = await Promise.all([
       // 1. Leads Counts
@@ -130,14 +80,8 @@ export const getRecentActivity = async (req: Request, res: Response) => {
   const user = (req as any).user;
 
   try {
-    let teamIds: number[] | undefined;
-    if (user.role !== 'ADMIN') {
-      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-      teamIds = [user.employeeId, ...reporteeIds];
-    }
-
-    const leadsWhere = await getModuleWhere(user, 'leads', teamIds);
-    const tasksWhere = await getModuleWhere(user, 'tasks', teamIds);
+    const leadsWhere = await getModuleWhereClause(user, 'leads');
+    const tasksWhere = await getModuleWhereClause(user, 'tasks');
 
     const [recentLeads, recentTasks] = await Promise.all([
       leadsWhere !== null

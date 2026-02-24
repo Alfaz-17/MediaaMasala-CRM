@@ -108,7 +108,12 @@ async function main() {
       { module: 'leads', action: 'edit', scopeType: 'team' },
       { module: 'leads', action: 'edit', scopeType: 'own' },
       { module: 'leads', action: 'create', scopeType: 'all' },
+      { module: 'leads', action: 'create', scopeType: 'department' },
+      { module: 'leads', action: 'create', scopeType: 'team' },
+      { module: 'leads', action: 'create', scopeType: 'own' },
       { module: 'leads', action: 'assign', scopeType: 'all' },
+      { module: 'leads', action: 'assign', scopeType: 'department' },
+      { module: 'leads', action: 'assign', scopeType: 'team' },
       { module: 'leads', action: 'delete', scopeType: 'all' },
       
       // Tasks
@@ -117,20 +122,28 @@ async function main() {
       { module: 'tasks', action: 'view', scopeType: 'team' },
       { module: 'tasks', action: 'view', scopeType: 'own' },
       { module: 'tasks', action: 'create', scopeType: 'all' },
+      { module: 'tasks', action: 'create', scopeType: 'department' },
+      { module: 'tasks', action: 'create', scopeType: 'team' },
+      { module: 'tasks', action: 'create', scopeType: 'own' },
       { module: 'tasks', action: 'edit', scopeType: 'all' },
       { module: 'tasks', action: 'edit', scopeType: 'department' },
       { module: 'tasks', action: 'edit', scopeType: 'team' },
       { module: 'tasks', action: 'edit', scopeType: 'own' },
       { module: 'tasks', action: 'delete', scopeType: 'all' },
       { module: 'tasks', action: 'assign', scopeType: 'all' },
+      { module: 'tasks', action: 'assign', scopeType: 'department' },
+      { module: 'tasks', action: 'assign', scopeType: 'team' },
+
       
       // Projects
       { module: 'projects', action: 'create', scopeType: 'all' },
       { module: 'projects', action: 'view', scopeType: 'all' },
       { module: 'projects', action: 'view', scopeType: 'department' },
+      { module: 'projects', action: 'view', scopeType: 'team' }, // Added Team scope for Projects
       { module: 'projects', action: 'view', scopeType: 'assigned' },
       { module: 'projects', action: 'edit', scopeType: 'all' },
       { module: 'projects', action: 'edit', scopeType: 'department' },
+      { module: 'projects', action: 'edit', scopeType: 'team' }, // Added Team scope for Projects
       { module: 'projects', action: 'edit', scopeType: 'assigned' },
       { module: 'projects', action: 'delete', scopeType: 'all' },
       
@@ -159,16 +172,22 @@ async function main() {
       { module: 'attendance', action: 'approve', scopeType: 'department' },
       { module: 'attendance', action: 'approve', scopeType: 'team' },
       
-      // Employees
+      // Employees & Roles (Simplified management)
       { module: 'employees', action: 'view', scopeType: 'all' },
       { module: 'employees', action: 'view', scopeType: 'department' },
       { module: 'employees', action: 'view', scopeType: 'team' },
-      { module: 'employees', action: 'view', scopeType: 'own' },
-      { module: 'employees', action: 'manage', scopeType: 'all' },
-      { module: 'employees', action: 'edit', scopeType: 'all' },
-      { module: 'employees', action: 'edit', scopeType: 'department' },
-      { module: 'employees', action: 'edit', scopeType: 'team' },
-      { module: 'employees', action: 'edit', scopeType: 'own' },
+      { module: 'employees', action: 'manage', scopeType: 'all' }, 
+      { module: 'roles', action: 'manage', scopeType: 'all' }, 
+      
+      // Leaves
+      { module: 'leaves', action: 'view', scopeType: 'all' },
+      { module: 'leaves', action: 'view', scopeType: 'department' },
+      { module: 'leaves', action: 'view', scopeType: 'team' },
+      { module: 'leaves', action: 'view', scopeType: 'own' },
+      { module: 'leaves', action: 'create', scopeType: 'own' },
+      { module: 'leaves', action: 'approve', scopeType: 'all' },
+      { module: 'leaves', action: 'approve', scopeType: 'department' },
+      { module: 'leaves', action: 'approve', scopeType: 'team' },
       
       // Reports
       { module: 'reports', action: 'generate', scopeType: 'all' },

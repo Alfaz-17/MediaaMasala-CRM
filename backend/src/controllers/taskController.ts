@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/logger';
 import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getModuleWhereClause } from '../utils/permissionUtils';
 
 const employeeSelect = {
   id: true,
@@ -42,24 +43,9 @@ export const getTasks = async (req: Request, res: Response) => {
   const { filter, departmentId, assigneeId } = req.query;
 
   try {
-    let whereClause: any = {};
-
-    // 1. Apply RBAC Scope
-    if (scope === 'own') {
-      whereClause.assigneeId = user.employeeId;
-    } else if (scope === 'department') {
-      whereClause.OR = [
-        { assignee: { departmentId: user.departmentId } },
-        { creator: { departmentId: user.departmentId } }
-      ];
-    } else if (scope === 'team') {
-      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-      const teamIds = [user.employeeId, ...reporteeIds];
-      whereClause.OR = [
-        { assigneeId: { in: teamIds } },
-        { creatorId: { in: teamIds } }
-      ];
-    }
+    // 1. Apply RBAC Scope using Centralized Utility
+    let whereClause = await getModuleWhereClause(user, 'tasks');
+    if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
 
     // 2. Apply explicit filters (Team/Dept)
     if (departmentId) {
@@ -343,7 +329,43 @@ export const updateTask = async (req: Request, res: Response) => {
     const updateData: any = { ...rest };
     if (dueDate) updateData.dueDate = new Date(dueDate);
 
+    // RBAC: Assignment Scope Check
+    if (rest.assigneeId && Number(rest.assigneeId) !== existingTask.assigneeId) {
+      const permissions = (req as any).user.permissions || [];
+      const assignPerm = permissions.find((p: any) => p.module === 'tasks' && p.action === 'assign');
+      
+      if (!assignPerm) {
+        return res.status(403).json({ message: 'Access denied: You do not have permission to assign tasks' });
+      }
+
+      const targetAssigneeId = Number(rest.assigneeId);
+      const assignScope = assignPerm.scope;
+
+      if (assignScope === 'own' && targetAssigneeId !== user.employeeId) {
+        return res.status(403).json({ message: 'Access denied: You can only assign tasks to yourself' });
+      }
+
+      if (assignScope === 'team') {
+        const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+        const teamIds = [user.employeeId, ...reporteeIds];
+        if (!teamIds.includes(targetAssigneeId)) {
+          return res.status(403).json({ message: 'Access denied: You can only assign tasks to members of your team' });
+        }
+      }
+
+      if (assignScope === 'department') {
+        const assigneeEmp = await prisma.employee.findUnique({ 
+          where: { id: targetAssigneeId },
+          select: { departmentId: true }
+        });
+        if (!assigneeEmp || assigneeEmp.departmentId !== user.departmentId) {
+          return res.status(403).json({ message: 'Access denied: You can only assign tasks within your department' });
+        }
+      }
+    }
+
     if (status) {
+
       updateData.status = status;
       if (status === 'Completed') {
         updateData.completedAt = new Date();

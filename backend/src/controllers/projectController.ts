@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/logger';
 import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getModuleWhereClause } from '../utils/permissionUtils';
 
 export const getProjects = async (req: Request, res: Response) => {
   const user = (req as any).user;
@@ -9,30 +10,9 @@ export const getProjects = async (req: Request, res: Response) => {
 
   try {
     const { departmentId, employeeId } = req.query;
-    let whereClause: any = {};
-
-    // Basic SCOPE filtering
-    if (scope === 'own' || scope === 'assigned') {
-       whereClause.OR = [
-         { lead: { ownerId: user.employeeId } },
-         { projectManagerId: user.employeeId },
-         { relationshipManagerId: user.employeeId }
-       ];
-    } else if (scope === 'department') {
-       whereClause.OR = [
-         { lead: { departmentId: user.departmentId } },
-         { projectManager: { departmentId: user.departmentId } },
-         { relationshipManager: { departmentId: user.departmentId } }
-       ];
-    } else if (scope === 'team') {
-       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-       const teamIds = [user.employeeId, ...reporteeIds];
-       whereClause.OR = [
-         { lead: { ownerId: { in: teamIds } } },
-         { projectManagerId: { in: teamIds } },
-         { relationshipManagerId: { in: teamIds } }
-       ];
-    }
+    // 1. Apply RBAC Scope using Centralized Utility
+    let whereClause = await getModuleWhereClause(user, 'projects');
+    if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
 
     // Apply additional filters if scope allows
     if (departmentId) {
@@ -108,43 +88,27 @@ export const getProjects = async (req: Request, res: Response) => {
 export const getProjectById = async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = (req as any).user;
-  const scope = (req as any).permissionScope;
 
   try {
-    let whereClause: any = { id: Number(id) };
-
-    // SCOPE Filtering
-    if (scope === 'own' || scope === 'assigned') {
-       whereClause.OR = [
-         { lead: { ownerId: user.employeeId } },
-         { projectManagerId: user.employeeId },
-         { relationshipManagerId: user.employeeId }
-       ];
-    } else if (scope === 'department') {
-       whereClause.OR = [
-         { lead: { departmentId: user.departmentId } },
-         { projectManager: { departmentId: user.departmentId } },
-         { relationshipManager: { departmentId: user.departmentId } }
-       ];
-    } else if (scope === 'team') {
-       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-       const teamIds = [user.employeeId, ...reporteeIds];
-       whereClause.OR = [
-         { lead: { ownerId: { in: teamIds } } },
-         { projectManagerId: { in: teamIds } },
-         { relationshipManagerId: { in: teamIds } }
-       ];
-    }
+    // 1. Apply RBAC Scope using Centralized Utility
+    const rbacWhere = await getModuleWhereClause(user, 'projects');
+    if (rbacWhere === null) return res.status(403).json({ message: 'Access denied' });
 
     const project = await (prisma as any).project.findFirst({
-      where: whereClause,
+      where: {
+        AND: [
+          { id: Number(id) },
+          rbacWhere
+        ]
+      },
       include: {
         lead: {
           select: {
             id: true,
             name: true,
             company: true,
-            email: true
+            email: true,
+            departmentId: true 
           }
         },
         projectManager: {
@@ -153,7 +117,8 @@ export const getProjectById = async (req: Request, res: Response) => {
             firstName: true,
             lastName: true,
             role: { select: { name: true } },
-            department: { select: { name: true } }
+            department: { select: { name: true } },
+            departmentId: true
           }
         },
         relationshipManager: {
@@ -162,7 +127,8 @@ export const getProjectById = async (req: Request, res: Response) => {
             firstName: true,
             lastName: true,
             role: { select: { name: true } },
-            department: { select: { name: true } }
+            department: { select: { name: true } },
+            departmentId: true
           }
         },
         tasks: {
@@ -183,6 +149,7 @@ export const getProjectById = async (req: Request, res: Response) => {
     }
 
     res.json(project);
+
   } catch (error) {
     console.error('Error fetching project detail:', error);
     res.status(500).json({ message: 'Error fetching project details' });
@@ -260,6 +227,10 @@ export const createProject = async (req: Request, res: Response) => {
   try {
     const scope = (req as any).permissionScope;
 
+    if (scope !== 'all') {
+      return res.status(403).json({ message: 'Access denied: Only users with ALL scope can initiate new projects' });
+    }
+
     if (leadId) {
       // RBC: Verify lead access
       const lead = await prisma.lead.findUnique({ where: { id: String(leadId) } });
@@ -279,16 +250,37 @@ export const createProject = async (req: Request, res: Response) => {
       }
     }
 
+    // RBAC: Validate PM/RM Scope
+    const pmId = projectManagerId ? Number(projectManagerId) : null;
+    const rmId = relationshipManagerId ? Number(relationshipManagerId) : null;
+
+    if (scope === 'team') {
+       const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
+       const teamIds = [user.employeeId, ...reporteeIds];
+       if (pmId && !teamIds.includes(pmId)) return res.status(403).json({ message: 'Access denied: Project Manager not in your team' });
+       if (rmId && !teamIds.includes(rmId)) return res.status(403).json({ message: 'Access denied: Relationship Manager not in your team' });
+    } else if (scope === 'department') {
+       if (pmId) {
+          const pm = await prisma.employee.findUnique({ where: { id: pmId }, select: { departmentId: true } });
+          if (!pm || pm.departmentId !== user.departmentId) return res.status(403).json({ message: 'Access denied: PM from another department' });
+       }
+       if (rmId) {
+          const rm = await prisma.employee.findUnique({ where: { id: rmId }, select: { departmentId: true } });
+          if (!rm || rm.departmentId !== user.departmentId) return res.status(403).json({ message: 'Access denied: RM from another department' });
+       }
+    }
+
     const project = await (prisma as any).project.create({
       data: {
         name,
         description,
         status: status || 'Active',
         leadId: leadId ? String(leadId) : undefined,
-        projectManagerId: projectManagerId ? Number(projectManagerId) : undefined,
-        relationshipManagerId: relationshipManagerId ? Number(relationshipManagerId) : undefined
+        projectManagerId: pmId || undefined,
+        relationshipManagerId: rmId || undefined
       }
     });
+
 
     await logActivity({
       employeeId: user.employeeId,

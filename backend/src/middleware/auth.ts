@@ -10,11 +10,17 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
   if (!token) return res.status(401).json({ message: 'Authentication token required' });
 
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+  jwt.verify(token, JWT_SECRET, async (err: any, user: any) => {
     if (err) return res.status(401).json({ message: 'Invalid or expired token' });
     
-    // SECURITY PATCH: Ensure metadata fields are never 'undefined' (which Prisma ignores)
-    // but instead explicitly 'null' or the value.
+    // SECURITY PATCH: Quick check for active status if user.id is in token
+    if (user.id) {
+        const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { isActive: true } });
+        if (!dbUser || !dbUser.isActive) {
+            return res.status(401).json({ message: 'Account is disabled or does not exist' });
+        }
+    }
+
     (req as any).user = {
       ...user,
       id: user.id || null,
@@ -46,6 +52,7 @@ export const checkPermission = (module: string, action: string) => {
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
         select: {
+          isActive: true, // ENFORCED
           role: {
             select: {
               code: true,
@@ -57,7 +64,11 @@ export const checkPermission = (module: string, action: string) => {
         }
       });
 
-      if (!dbUser || !dbUser.role) {
+      if (!dbUser || !dbUser.isActive) {
+          return res.status(401).json({ message: 'Account is disabled' });
+      }
+
+      if (!dbUser.role) {
         return next(new AppError('You do not have the necessary permissions to perform this action.', 403));
       }
 
@@ -73,11 +84,11 @@ export const checkPermission = (module: string, action: string) => {
         scope: rp.permission.scopeType
       }));
 
-      const permission = freshPermissions.find(
+      const relevantPermissions = freshPermissions.filter(
         (p: any) => p.module === module && p.action === action
       );
-
-      if (!permission) {
+      
+      if (relevantPermissions.length === 0) {
         const actionMap: Record<string, string> = {
           'view': 'view this content',
           'create': 'create new items',
@@ -89,6 +100,15 @@ export const checkPermission = (module: string, action: string) => {
         const readableAction = actionMap[action] || action;
         return next(new AppError(`You don't have permission to ${readableAction} in ${module}.`, 403));
       }
+
+      // Pick the most permissive scope
+      const scopeOrder = ['all', 'department', 'team', 'own'];
+      relevantPermissions.sort((a: any, b: any) => 
+        scopeOrder.indexOf(a.scope) - scopeOrder.indexOf(b.scope)
+      );
+      
+      const permission = relevantPermissions[0];
+
 
       // Attach permission scope to request for controller filtering
       (req as any).permissionScope = permission.scope;

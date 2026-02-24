@@ -45,6 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { usePermissions } from "@/hooks/use-permissions"
 import { PermissionGuard } from "@/components/permission-guard"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
@@ -108,6 +109,7 @@ const getProductStatusColor = (status: string) => {
 
 export default function ProductsPage() {
   const { data: session, status } = useSession()
+  const { hasPermission } = usePermissions()
   const router = useRouter()
   
   const [products, setProducts] = useState<Product[]>([])
@@ -258,59 +260,70 @@ export default function ProductsPage() {
             <h1 className="text-xl font-bold text-foreground">Software Products</h1>
             <p className="text-xs text-muted-foreground mt-1">Manage digital assets and assigned managers.</p>
           </div>
-          <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if(!open) setEditingProduct(null); }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-9 font-bold">
-                <Plus className="mr-2 h-4 w-4" /> Create Product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>{editingProduct ? 'Edit Product' : 'New Product'}</DialogTitle>
-                  <DialogDescription>Enter product specification details.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="name" className="text-xs font-bold uppercase">Product Name</Label>
-                      <Input id="name" name="name" defaultValue={editingProduct?.name} required placeholder="e.g. CRM System" className="h-9 text-sm" />
+          {hasPermission("products", "create") && (
+            <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if(!open) setEditingProduct(null); }}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="h-9 font-bold">
+                  <Plus className="mr-2 h-4 w-4" /> Create Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>{editingProduct ? 'Edit Product' : 'New Product'}</DialogTitle>
+                    <DialogDescription>Enter product specification details.</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="name" className="text-xs font-bold uppercase">Product Name</Label>
+                        <Input id="name" name="name" defaultValue={editingProduct?.name} required placeholder="e.g. CRM System" className="h-9 text-sm" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="category" className="text-xs font-bold uppercase">Tech Stack / Category</Label>
+                        <Input id="category" name="category" defaultValue={editingProduct?.category} placeholder="e.g. Next.js, FastAPI" className="h-9 text-sm" />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="category" className="text-xs font-bold uppercase">Tech Stack / Category</Label>
-                      <Input id="category" name="category" defaultValue={editingProduct?.category} placeholder="e.g. Next.js, FastAPI" className="h-9 text-sm" />
+                      <Label className="text-xs font-bold uppercase">Product Manager</Label>
+                      <Select value={formProdMgrId} onValueChange={setFormProdMgrId}>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Assign a manager..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {employees
+                            .filter((emp: any) => {
+                                const userPerms = session?.user as any;
+                                const scope = userPerms?.permissions?.find((p: any) => p.module === 'products' && (p.action === 'create' || p.action === 'edit'))?.scope;
+                                if (scope === 'all' || !scope) return true;
+                                if (scope === 'department') return emp.departmentId === userPerms?.departmentId;
+                                if (scope === 'own') return emp.id === userPerms?.employeeId;
+                                return true;
+                            })
+                            .map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                              {emp.firstName} {emp.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold uppercase">Description</Label>
+                      <RichTextEditor value={formDescription} onChange={setFormDescription} />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase">Product Manager</Label>
-                    <Select value={formProdMgrId} onValueChange={setFormProdMgrId}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Assign a manager..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {employees.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id.toString()}>
-                            {emp.firstName} {emp.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase">Description</Label>
-                    <RichTextEditor value={formDescription} onChange={setFormDescription} />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={submitting} className="font-bold text-xs h-9">
-                    {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    {editingProduct ? 'Update Product' : 'Create Product'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter>
+                    <Button type="submit" disabled={submitting} className="font-bold text-xs h-9">
+                      {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                      {editingProduct ? 'Update Product' : 'Create Product'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
@@ -360,12 +373,16 @@ export default function ProductsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditingProduct(product); setIsModalOpen(true); }} className="cursor-pointer">
-                          <Pencil className="mr-2 h-3.5 w-3.5" /> Edit details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive cursor-pointer" onClick={() => setProductToDelete(product)}>
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete product
-                        </DropdownMenuItem>
+                        {hasPermission("products", "edit") && (
+                          <DropdownMenuItem onClick={() => { setEditingProduct(product); setIsModalOpen(true); }} className="cursor-pointer">
+                            <Pencil className="mr-2 h-3.5 w-3.5" /> Edit details
+                          </DropdownMenuItem>
+                        )}
+                        {hasPermission("products", "delete") && (
+                          <DropdownMenuItem className="text-destructive cursor-pointer" onClick={() => setProductToDelete(product)}>
+                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete product
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -433,9 +450,11 @@ export default function ProductsPage() {
               )}
             </div>
             <DialogFooter>
-               <Button size="sm" className="font-bold text-xs" onClick={() => router.push(`/dashboard/tasks/new?productId=${viewTasksProduct?.id}`)}>
-                 Add Task
-               </Button>
+               {hasPermission("tasks", "create") && (
+                 <Button size="sm" className="font-bold text-xs" onClick={() => router.push(`/dashboard/tasks/new?productId=${viewTasksProduct?.id}`)}>
+                   Add Task
+                 </Button>
+               )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

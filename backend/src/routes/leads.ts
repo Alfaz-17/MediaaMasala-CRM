@@ -15,7 +15,7 @@ import { authenticateToken, checkPermission } from '../middleware/auth';
 
 const router = express.Router();
 
-router.get('/employees', authenticateToken, getEmployees);
+router.get('/employees', authenticateToken, checkPermission('leads', 'view'), getEmployees);
 router.get('/', authenticateToken, checkPermission('leads', 'view'), getLeads);
 router.post('/', authenticateToken, checkPermission('leads', 'create'), createLead);
 router.get('/:id', authenticateToken, checkPermission('leads', 'view'), getLeadById);
