@@ -2,8 +2,10 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
+import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
+const localPrisma = new PrismaClient(); // Backup client for debugging
 
 // SRE: Fail-fast if JWT_SECRET is missing (Scenario: Render/Vercel Cold Start / CI Mismatch)
 if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
@@ -68,7 +70,7 @@ router.post('/login', async (req, res) => {
         employeeId: user.employee.id,
         email: user.email,
         role: user.employee.role.code,
-        roleVersion: (user.employee.role as any).roleVersion,
+        roleVersion: (user.employee.role as any).roleVersion || 1,
         departmentId: user.employee.departmentId,
         permissions: permissions
       },
@@ -94,9 +96,9 @@ router.post('/login', async (req, res) => {
       },
       permissions
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 

@@ -1,28 +1,21 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
-import { getRecursiveReporteeIds } from '../utils/userUtils';
+import { getModuleWhereClause } from '../utils/permissionUtils';
 
 export const getActivityLogs = async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const scope = (req as any).permissionScope;
   const { module, entityId, page = 1, limit = 50 } = req.query;
 
   try {
-    let whereClause: any = {};
+    // 1. Apply RBAC Scope using Centralized Utility
+    const rbacWhere = await getModuleWhereClause(user, 'activity');
+    if (rbacWhere === null) return res.status(403).json({ message: 'Access denied' });
 
-    // Filter by Entity or Module if provided
+    let whereClause: any = { ...rbacWhere };
+
+    // 2. Additional filters (narrow within scope, never widen)
     if (module) whereClause.module = module;
     if (entityId) whereClause.entityId = entityId.toString();
-
-    // RBAC Scope Filtering
-    if (scope === 'own') {
-      whereClause.employeeId = user.employeeId;
-    } else if (scope === 'department') {
-      whereClause.employee = { departmentId: user.departmentId };
-    } else if (scope === 'team') {
-      const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
-      whereClause.employeeId = { in: [user.employeeId, ...reporteeIds] };
-    }
 
     const logs = await (prisma as any).activityLog.findMany({
       where: whereClause,

@@ -36,8 +36,15 @@ export function usePermissions() {
   const getModuleScope = useCallback((module: string) => {
     if (role === 'ADMIN') return 'all'
     const perm = permissions.find((p: any) => p.module === module && p.action === 'view')
-    return perm?.scopeType || 'own'
+    return perm?.scope || perm?.scopeType || null // null = no access, never default to 'own'
   }, [role, permissions])
+
+  // Convenience helpers for UI gating (NOT for data filtering)
+  const canView = useCallback((module: string) => hasPermission(module, 'view'), [hasPermission])
+  const canCreate = useCallback((module: string) => hasPermission(module, 'create'), [hasPermission])
+  const canEdit = useCallback((module: string) => hasPermission(module, 'edit'), [hasPermission])
+  const canDelete = useCallback((module: string) => hasPermission(module, 'delete'), [hasPermission])
+  const canAssign = useCallback((module: string) => hasPermission(module, 'assign'), [hasPermission])
 
   const hasModule = useCallback((module: string) => {
     if (role === 'ADMIN') return true
@@ -50,12 +57,17 @@ export function usePermissions() {
     hasPermission,
     hasModule,
     getModuleScope,
+    canView,
+    canCreate,
+    canEdit,
+    canDelete,
+    canAssign,
     role,
     user: data?.user || user,
     isAdmin: role === 'ADMIN',
     refreshPermissions: refetch,
     permissions,
     isLoading: status === "loading" || isLoading
-  }), [hasPermission, hasModule, role, refetch, permissions, isLoading, status, data?.user, user])
+  }), [hasPermission, hasModule, getModuleScope, canView, canCreate, canEdit, canDelete, canAssign, role, refetch, permissions, isLoading, status, data?.user, user])
 }
 

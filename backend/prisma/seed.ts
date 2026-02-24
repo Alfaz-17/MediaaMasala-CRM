@@ -139,12 +139,12 @@ async function main() {
       { module: 'projects', action: 'create', scopeType: 'all' },
       { module: 'projects', action: 'view', scopeType: 'all' },
       { module: 'projects', action: 'view', scopeType: 'department' },
-      { module: 'projects', action: 'view', scopeType: 'team' }, // Added Team scope for Projects
-      { module: 'projects', action: 'view', scopeType: 'assigned' },
+      { module: 'projects', action: 'view', scopeType: 'team' },
+      { module: 'projects', action: 'view', scopeType: 'own' },
       { module: 'projects', action: 'edit', scopeType: 'all' },
       { module: 'projects', action: 'edit', scopeType: 'department' },
-      { module: 'projects', action: 'edit', scopeType: 'team' }, // Added Team scope for Projects
-      { module: 'projects', action: 'edit', scopeType: 'assigned' },
+      { module: 'projects', action: 'edit', scopeType: 'team' },
+      { module: 'projects', action: 'edit', scopeType: 'own' },
       { module: 'projects', action: 'delete', scopeType: 'all' },
       
       // Products
@@ -172,12 +172,25 @@ async function main() {
       { module: 'attendance', action: 'approve', scopeType: 'department' },
       { module: 'attendance', action: 'approve', scopeType: 'team' },
       
-      // Employees & Roles (Simplified management)
+      // Employees & Roles
       { module: 'employees', action: 'view', scopeType: 'all' },
       { module: 'employees', action: 'view', scopeType: 'department' },
       { module: 'employees', action: 'view', scopeType: 'team' },
+      { module: 'employees', action: 'view', scopeType: 'own' },
       { module: 'employees', action: 'manage', scopeType: 'all' }, 
-      { module: 'roles', action: 'manage', scopeType: 'all' }, 
+      { module: 'roles', action: 'manage', scopeType: 'all' },
+      
+      // Dashboard
+      { module: 'dashboard', action: 'view', scopeType: 'all' },
+      { module: 'dashboard', action: 'view', scopeType: 'department' },
+      { module: 'dashboard', action: 'view', scopeType: 'team' },
+      { module: 'dashboard', action: 'view', scopeType: 'own' },
+      
+      // Activity Logs
+      { module: 'activity', action: 'view', scopeType: 'all' },
+      { module: 'activity', action: 'view', scopeType: 'department' },
+      { module: 'activity', action: 'view', scopeType: 'team' },
+      { module: 'activity', action: 'view', scopeType: 'own' },
       
       // Leaves
       { module: 'leaves', action: 'view', scopeType: 'all' },
@@ -270,6 +283,8 @@ async function main() {
           { module: 'employees', action: 'view', scope: 'department' },
           { module: 'employees', action: 'edit', scope: 'department' },
           { module: 'reports', action: 'generate', scope: 'department' },
+          { module: 'dashboard', action: 'view', scope: 'department' },
+          { module: 'activity', action: 'view', scope: 'department' },
         );
       }
 
@@ -290,6 +305,8 @@ async function main() {
           { module: 'attendance', action: 'create', scope: 'own' },
           { module: 'reports', action: 'generate', scope: 'team' },
           { module: 'employees', action: 'view', scope: 'team' },
+          { module: 'dashboard', action: 'view', scope: 'team' },
+          { module: 'activity', action: 'view', scope: 'team' },
         );
       }
 
@@ -312,6 +329,8 @@ async function main() {
           { module: 'reports', action: 'generate', scope: 'team' },
           { module: 'employees', action: 'view', scope: 'team' },
           { module: 'projects', action: 'view', scope: 'department' },
+          { module: 'dashboard', action: 'view', scope: 'team' },
+          { module: 'activity', action: 'view', scope: 'team' },
         );
       }
 
@@ -327,6 +346,8 @@ async function main() {
           { module: 'attendance', action: 'view', scope: 'department' },
           { module: 'employees', action: 'view', scope: 'department' },
           { module: 'reports', action: 'generate', scope: 'department' },
+          { module: 'dashboard', action: 'view', scope: 'department' },
+          { module: 'activity', action: 'view', scope: 'department' },
         );
       }
 
@@ -339,6 +360,8 @@ async function main() {
           { module: 'employees', action: 'manage', scope: 'all' },
           { module: 'eod', action: 'view', scope: 'department' },
           { module: 'reports', action: 'generate', scope: 'department' },
+          { module: 'dashboard', action: 'view', scope: 'department' },
+          { module: 'activity', action: 'view', scope: 'department' },
         );
       }
 
@@ -354,8 +377,10 @@ async function main() {
           { module: 'attendance', action: 'view', scope: 'own' },
           { module: 'attendance', action: 'create', scope: 'own' },
           { module: 'employees', action: 'view', scope: 'own' },
-          { module: 'projects', action: 'view', scope: 'assigned' },
+          { module: 'projects', action: 'view', scope: 'own' },
           { module: 'reports', action: 'generate', scope: 'own' },
+          { module: 'dashboard', action: 'view', scope: 'own' },
+          { module: 'activity', action: 'view', scope: 'own' },
         );
       }
 
@@ -424,8 +449,6 @@ async function main() {
         create: {
           email: adminEmail,
           passwordHash: hashedPassword,
-          roleId: adminRole.id,
-          departmentId: adminDept.id,
         },
       });
 
@@ -464,12 +487,10 @@ async function main() {
 
         const user = await prisma.user.upsert({
           where: { email },
-          update: { passwordHash: hashedPassword, roleId: r.id, departmentId: d.id },
+          update: { passwordHash: hashedPassword },
           create: {
             email,
             passwordHash: hashedPassword,
-            roleId: r.id,
-            departmentId: d.id,
           }
         });
 

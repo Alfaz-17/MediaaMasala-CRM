@@ -1,7 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
-import dotenv from 'dotenv';
 import prisma from './lib/prisma';
 
 import authRoutes from './routes/auth';
@@ -35,8 +37,6 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 4000;

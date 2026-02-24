@@ -73,13 +73,9 @@ export const createProduct = safeHandler(async (req: Request, res: Response) => 
   const user = (req as any).user;
   const scope = (req as any).permissionScope;
 
-  if (scope !== 'all') {
-    return res.status(403).json({ message: 'Access denied: Only users with ALL scope can add new products to the catalog' });
-  }
-
   const pmId = productManagerId ? parseInt(productManagerId) : null;
 
-  // SCOPE CHECK for PM assignment
+  // SCOPE CHECK: PM assignment must be within user's scope
   if (pmId) {
      if (scope === 'own' && pmId !== user.employeeId) {
        return res.status(403).json({ message: 'Access denied: Can only manage your own products' });

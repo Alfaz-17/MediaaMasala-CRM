@@ -1,9 +1,15 @@
 import { getRecursiveReporteeIds } from './userUtils';
+import { normalizeScope } from '../types/rbac';
 
 /**
  * Centrally builds a Prisma 'where' clause based on module and scope.
  * This ensures that hierarchical rules (ALL, DEPARTMENT, TEAM, OWN)
  * are applied consistently across the entire system.
+ * 
+ * Returns:
+ *   {} — no filter (scope=all or ADMIN)
+ *   { ...clause } — scoped filter
+ *   null — DENY (no permission found)
  */
 export async function getModuleWhereClause(
   user: any,
@@ -18,7 +24,7 @@ export async function getModuleWhereClause(
       p.action === action || 
       (action === 'view' && p.action === 'read') ||
       (action === 'edit' && p.action === 'write') ||
-      (action === 'delete' && p.action === 'edit') // Often users with edit can delete, but check matrix
+      (action === 'delete' && p.action === 'edit') // Users with edit can often delete
     )
   );
 
@@ -28,15 +34,16 @@ export async function getModuleWhereClause(
   // View action is always 'all' scope regardless of initial assignment.
   if (moduleName === 'products' && action === 'view') return {};
 
-  const scope = permission.scope;
+  // Normalize legacy scope values ('assigned' → 'own')
+  const scope = normalizeScope(permission.scope);
 
-  // 1. OWN / ASSIGNED Scope
-  if (scope === 'own' || scope === 'assigned') {
+  // ─── OWN Scope ──────────────────────────────────────────────────────
+  if (scope === 'own') {
     if (moduleName === 'leads') {
       return { 
         OR: [
           { ownerId: user.employeeId },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ]
       };
     }
@@ -47,15 +54,19 @@ export async function getModuleWhereClause(
           { lead: { ownerId: user.employeeId } }, 
           { projectManagerId: user.employeeId }, 
           { relationshipManagerId: user.employeeId },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ] 
       };
     }
     if (moduleName === 'products') return { productManagerId: user.employeeId };
-    if (moduleName === 'attendance' || moduleName === 'leaves' || moduleName === 'eod') return { employeeId: user.employeeId };
+    if (moduleName === 'attendance' || moduleName === 'leaves' || moduleName === 'eod') {
+      return { employeeId: user.employeeId };
+    }
+    if (moduleName === 'employees') return { id: user.employeeId };
+    if (moduleName === 'activity') return { employeeId: user.employeeId };
   }
 
-  // 2. TEAM Scope (Recursive)
+  // ─── TEAM Scope (Recursive) ─────────────────────────────────────────
   if (scope === 'team') {
     const reporteeIds = await getRecursiveReporteeIds(user.employeeId);
     const teamIds = [user.employeeId, ...reporteeIds];
@@ -64,7 +75,7 @@ export async function getModuleWhereClause(
       return { 
         OR: [
           { ownerId: { in: teamIds } },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ] 
       };
     }
@@ -75,7 +86,7 @@ export async function getModuleWhereClause(
           { lead: { ownerId: { in: teamIds } } }, 
           { projectManagerId: { in: teamIds } }, 
           { relationshipManagerId: { in: teamIds } },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ] 
       };
     }
@@ -83,20 +94,24 @@ export async function getModuleWhereClause(
       return { 
         OR: [
           { productManagerId: { in: teamIds } },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ] 
       };
     }
-    if (moduleName === 'attendance' || moduleName === 'leaves' || moduleName === 'eod') return { employeeId: { in: teamIds } };
+    if (moduleName === 'attendance' || moduleName === 'leaves' || moduleName === 'eod') {
+      return { employeeId: { in: teamIds } };
+    }
+    if (moduleName === 'employees') return { id: { in: teamIds } };
+    if (moduleName === 'activity') return { employeeId: { in: teamIds } };
   }
 
-  // 3. DEPARTMENT Scope
+  // ─── DEPARTMENT Scope ───────────────────────────────────────────────
   if (scope === 'department') {
     if (moduleName === 'leads') {
       return { 
         OR: [
           { departmentId: user.departmentId },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ] 
       };
     }
@@ -107,7 +122,7 @@ export async function getModuleWhereClause(
           { lead: { departmentId: user.departmentId } }, 
           { projectManager: { departmentId: user.departmentId } }, 
           { relationshipManager: { departmentId: user.departmentId } },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ] 
       };
     }
@@ -115,13 +130,17 @@ export async function getModuleWhereClause(
       return { 
         OR: [
           { productManager: { departmentId: user.departmentId } },
-          { tasks: { some: { assigneeId: user.employeeId } } } // Implicit Inheritance
+          { tasks: { some: { assigneeId: user.employeeId } } }
         ] 
       };
     }
-    if (moduleName === 'attendance' || moduleName === 'leaves' || moduleName === 'eod') return { employee: { departmentId: user.departmentId } };
+    if (moduleName === 'attendance' || moduleName === 'leaves' || moduleName === 'eod') {
+      return { employee: { departmentId: user.departmentId } };
+    }
+    if (moduleName === 'employees') return { departmentId: user.departmentId };
+    if (moduleName === 'activity') return { employee: { departmentId: user.departmentId } };
   }
 
-  // 4. ALL Scope
+  // ─── ALL Scope ──────────────────────────────────────────────────────
   return {};
 }
