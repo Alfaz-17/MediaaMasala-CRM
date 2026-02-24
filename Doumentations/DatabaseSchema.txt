@@ -45,6 +45,7 @@ Table: Role
 - id (Int): Primary Key
 - name (String): Unique Name
 - code (String): Unique Code
+- roleVersion (Int): Incremental for JWT hygiene
 - isActive (Boolean): Default true
 - createdAt, updatedAt: Timestamps
 
@@ -102,6 +103,7 @@ Table: Lead
 - notes (String?): Legacy field
 - ownerId (Int?): FK to Employee
 - departmentId (Int): FK to Department
+- lostReason (String?): Mandatory if status is Lost
 - createdAt, updatedAt: Timestamps
 
 Table: Task
@@ -114,6 +116,7 @@ Table: Task
 - priority (String): High, Medium, Low
 - status (String): Pending, In Progress, Completed
 - relatedToLeadId (String?): FK to Lead
+- completionNote (String?): Mandatory if status is Completed
 - createdAt, updatedAt: Timestamps
 
 
@@ -146,11 +149,20 @@ Table: LeadNote [NEW]
 - isPrivate (Boolean): Default false
 - createdAt, updatedAt: Timestamps
 
+Table: LeaveRequest
+- id (Int): Primary Key
+- employeeId (Int): FK to Employee
+- startDate, endDate (DateTime)
+- type (Enum): Sick, Casual, Annual, Unpaid
+- status (Enum): Pending, Approved, Rejected
+- approvedById (Int?): FK to Employee [APPROVER]
+- managerNote (String?): Mandatory if status is Rejected
+- createdAt, updatedAt: Timestamps
+
 
 DESIGN NOTES
 ------------
 - All business data uses employeeId (not userId)
-- userId only used for authentication linkage
-- LeadNote: New owners can VIEW all notes (isPrivate=false) 
-  but can only ADD new notes, not edit existing ones
-- FollowUpLog: Tracks both scheduled and completed follow-ups
+- userId only used for authentication linkage (isActive check enforced)
+- JWT Hygiene: roleVersion check on every request prevents stale session access
+- Attendance: Unique constraint @@unique([employeeId, date]) prevents duplicates

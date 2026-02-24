@@ -138,7 +138,8 @@ POST /api/auth/logout
     "name": "John Doe",
     "email": "john@company.com",
     "role": "Manager",
-    "department": "Sales"
+    "department": "Sales",
+    "roleVersion": 1
   },
   "permissions": {
     "leads": { "view": "team", "create": true, "edit": "team" },
@@ -444,7 +445,9 @@ FRONTEND:
    - Pending → In Progress
    - In Progress → Completed
    - Any → Cancelled
-3. If status = "Completed": Show "Add completion note" field
+3. If status = "Completed": 
+   - Show "Add completion note" field (Mandatory, min 5 chars)
+   - Auto-set completed_at timestamp
 4. Send PUT request
 
 BACKEND:
@@ -668,13 +671,17 @@ Navigation Menu (shows based on permissions):
 
 ---
 
-## PHASE 3: ADVANCED FEATURES & SECURITY (IN PROGRESS)
-
-### System Hardening & Audit (Feb 2026)
-- **Unified RBAC**: Implemented `getModuleWhereClause` for all modules to eliminate manual scope checks.
-- **Backend Robustness**: Standardized all controllers with `safeHandler` for unified error responses.
-- **Data Privacy**: Restricted API responses via central `selectUtils.ts` to prevent data leakage.
-- **Frontend CX**: Introduced `PageSkeleton` architecture for premium UX on slow connections.
+### System Hardening & Audit (Audit 7 - COMPLETE)
+- **Session Hygiene**: Real-time `isActive` & `roleVersion` database checks on every request.
+- **RBAC Perimeter**: Standardized `getModuleWhereClause` with recursive hierarchy (TEAM scope).
+- **Hardened Business Rules**: 
+  - Mandatory `lostReason` for Leads.
+  - Mandatory `completionNote` for Tasks.
+  - Mandatory `managerNote` for Leave rejections.
+  - Overlapping leave prevention.
+  - Duplicate check-in prevention.
+- **Backend Robustness**: Standardized `safeHandler` architecture across all modules.
+- **CX Persistence**: Skeleton UI systems for all data-heavy pages.
 
 ---
 

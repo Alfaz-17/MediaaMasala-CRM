@@ -80,4 +80,7 @@ The Permission Matrix controls WHAT each role can see/do, and the "Reporting To"
 
 ## Summary
 
+> [!NOTE]
+> **Active-Only Filtering**: The system strictly filters for "Active" employees in all reporting lines. If a manager is deactivated, their reporting line is severed in real-time to prevent unauthorized data access ("Ghost Access").
+
 > **You build the hierarchy by setting "Reporting To" when adding staff. The system automatically figures out who can see whose data based on that chain + the role's permission scope.**

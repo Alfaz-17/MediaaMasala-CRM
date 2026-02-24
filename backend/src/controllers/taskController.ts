@@ -152,9 +152,12 @@ export const createTask = safeHandler(async (req: Request, res: Response) => {
     }
     const assigneeEmp = await prisma.employee.findUnique({ 
       where: { id: parsedAssigneeId },
-      select: { departmentId: true }
+      select: { departmentId: true, isActive: true }
     });
-    if (!assigneeEmp || assigneeEmp.departmentId !== user.departmentId) {
+    if (!assigneeEmp) return res.status(404).json({ message: 'Assignee not found' });
+    if (!assigneeEmp.isActive) return res.status(400).json({ message: 'Cannot assign tasks to an inactive employee' });
+
+    if (assigneeEmp.departmentId !== user.departmentId) {
       return res.status(403).json({ message: 'Access denied: You can only assign tasks within your department' });
     }
   }
@@ -277,8 +280,11 @@ export const updateTask = safeHandler(async (req: Request, res: Response) => {
   if (status) {
     updateData.status = status;
     if (status === 'Completed') {
+      if (!completionNote || completionNote.trim().length < 5) {
+        return res.status(400).json({ message: 'A completion note (min 5 chars) is required to close a task' });
+      }
       updateData.completedAt = new Date();
-      updateData.completionNote = completionNote || 'No completion note provided';
+      updateData.completionNote = completionNote;
     } else if (existingTask.status === 'Completed' && status !== 'Completed') {
       updateData.completedAt = null;
       updateData.completionNote = null;

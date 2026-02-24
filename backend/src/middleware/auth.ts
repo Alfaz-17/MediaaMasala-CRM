@@ -58,6 +58,7 @@ export const checkPermission = (module: string, action: string) => {
               role: {
                 select: {
                   code: true,
+                  roleVersion: true,
                   permissions: {
                     include: { permission: true }
                   }
@@ -69,7 +70,16 @@ export const checkPermission = (module: string, action: string) => {
       });
 
       if (!dbUser || !dbUser.isActive) {
-          return res.status(401).json({ message: 'Account is disabled' });
+          return res.status(401).json({ message: 'Account is disabled or session invalid' });
+      }
+
+      // JWT Hygiene: Real-time check for permission staleness
+      if (user.roleVersion !== undefined && dbUser.employee?.role?.roleVersion !== user.roleVersion) {
+        return res.status(401).json({ 
+          message: 'Permissions updated. Please log in again.',
+          code: 'TOKEN_STALE',
+          refreshRequired: true 
+        });
       }
 
       if (!dbUser.employee?.role) {

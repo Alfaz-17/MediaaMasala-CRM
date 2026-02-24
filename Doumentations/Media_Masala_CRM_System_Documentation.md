@@ -138,41 +138,42 @@ Media Masala CRM is a full-featured Customer Relationship Management system desi
 │          │     │ departmentId►│     │            │
 └────┬─────┘     └──────┬───────┘     └──────┬─────┘
      │                  │ 1:1               │
-     │           ┌──────▼───────┐     ┌─────▼──────────┐
-     │           │   Employee   │     │RolePermission  │
-     └──────────►│              │     │                │
-                 │ id           │     │ roleId      ──►│
-                 │ empId (EMP001)     │ permissionId──►│
-                 │ userId    ──►│     └────────────────┘
-                 │ managerId ──►│(self)        │
-                 │ departmentId►│        ┌─────▼──────┐
-                 │ roleId    ──►│        │ Permission │
-                 │ isActive     │        │            │
-                 └──┬───────────┘        │ module     │
-                    │                    │ action     │
-        ┌───────────┼───────────┐        │ scopeType  │
-        │           │           │        └────────────┘
-        ▼           ▼           ▼
-   ┌─────────┐ ┌─────────┐ ┌─────────────┐
-   │  Lead   │ │  Task   │ │ Attendance  │
-   │(UUID PK)│ │(UUID PK)│ │             │
-   │ name    │ │ title   │ │ date        │
-   │ email   │ │ status  │ │ checkIn     │
-   │ status  │ │ priority│ │ checkOut    │
-   │ ownerId►│ │assignee►│ │ status      │
-   │ deptId ►│ │ leadId ►│ └─────────────┘
-   │lostReason│ │projectId│
-   └────┬─────┘ │productId│  ┌─────────────┐
-        │       │complNote│  │LeaveRequest │
-        │       └─────────┘  │             │
-        ▼                    │ startDate   │
-   ┌─────────┐               │ endDate     │
-   │ Project │               │ type        │
-   │         │               │ status      │
-   │ name    │               │ approvedBy ►│
-   │ status  │               └─────────────┘
-   │ leadId ►│
-   └─────────┘  ┌─────────────┐
+      │           ┌──────▼───────┐     ┌─────▼──────────┐
+      │           │   Employee   │     │RolePermission  │
+      │           │              │     │                │
+      │           │ id           │     │ roleId      ──►│
+      │           │ empId (EMP001)     │ permissionId──►│
+      │           │ userId    ──►│     └────────────────┘
+      │           │ managerId ──►│(self)        │
+      │           │ departmentId►│        ┌─────▼──────┐
+      │           │ roleId    ──►│        │ Permission │
+      │           │ isActive     │        │            │
+      └──┬────────┴──────────────┘        │ module     │
+         │                                │ action     │
+         ├───────────┬───────────┐        │ scopeType  │
+         │           │           │        └────────────┘
+         ▼           ▼           ▼
+    ┌─────────┐ ┌─────────┐ ┌─────────────┐
+    │  Lead   │ │  Task   │ │ Attendance  │
+    │(UUID PK)│ │(UUID PK)│ │(Unique Day) │
+    │ name    │ │ title   │ │ date        │
+    │ email   │ │ status  │ │ checkIn     │
+    │ status  │ │ priority│ │ checkOut    │
+    │ ownerId►│ │assignee►│ │ status      │
+    │ deptId ►│ │ leadId ►│ └─────────────┘
+    │lostReason│ │projectId│
+    └────┬─────┘ │productId│  ┌─────────────┐
+         │       │complNote│  │LeaveRequest │
+         │       └─────────┘  │             │
+         ▼                    │ startDate   │
+    ┌─────────┐               │ endDate     │
+    │ Project │               │ type        │
+    │         │               │ status      │
+    │ name    │               │ approvedBy ►│
+    │ status  │               │ managerNote │
+    │ leadId ►│               └─────────────┘
+    └─────────┘
+  ┌─────────────┐
                 │  EodReport  │
    ┌─────────┐  │             │
    │ Product │  │ date        │
@@ -199,10 +200,10 @@ Media Masala CRM is a full-featured Customer Relationship Management system desi
 | Model | Table Name | PK Type | Description |
 |-------|-----------|---------|-------------|
 | Department | `departments` | Auto Int | Organizational units |
-| Role | `roles` | Auto Int | RBAC role definitions |
+| Role | `roles` | Auto Int | RBAC role definitions (includes `roleVersion` for JWT hygiene) |
 | Permission | `permissions` | Auto Int | Module-Action-Scope permissions |
 | RolePermission | `role_permissions` | Auto Int | Many-to-many role ↔ permission mapping |
-| User | `users` | Auto Int | Authentication identity |
+| User | `users` | Auto Int | Authentication identity (includes `isActive` check) |
 | Employee | `employees` | Auto Int | Business profile (linked to User 1:1) |
 
 #### Business Data Models
@@ -307,6 +308,8 @@ User Login Request
          ▼
 ┌─────────────────┐
 │ Sign JWT (8hr)  │
+│ payload includes│
+│ roleVersion     │
 │ Return token +  │
 │ user + perms    │
 └─────────────────┘
@@ -318,10 +321,11 @@ User Login Request
 |-------|----------|------------|
 | 1 | **CORS** | Restricts API access to allowed domains |
 | 2 | **JWT Verification** | Validates token signature and expiry |
-| 3 | **Permission Middleware** | Checks `module:action:scope` against JWT payload |
-| 4 | **Unified RBAC (Backend)** | Uses `getModuleWhereClause` for standardized Prisma filters |
-| 5 | **Secure Handler** | `safeHandler` utility manage global error formatting/masking |
-| 6 | **selectUtils.ts** | Centralized data selects prevent PII/password leakage |
+| 3 | **Real-time Hygiene** | Database check for `isActive` and `roleVersion` on **every** request |
+| 4 | **Permission Middleware** | Checks `module:action:scope` against JWT payload |
+| 5 | **Unified RBAC (Backend)** | Uses `getModuleWhereClause` for standardized Prisma filters |
+| 6 | **Secure Handler** | `safeHandler` utility manage global error formatting/masking |
+| 7 | **selectUtils.ts** | Centralized data selects prevent PII/password leakage |
 
 ### 5.3 JWT Payload Structure
 
@@ -332,6 +336,7 @@ User Login Request
   "role": "ADMIN",
   "department": "ADMIN",
   "employeeId": 1,
+  "roleVersion": 5,
   "permissions": [
     { "module": "leads", "action": "view", "scopeType": "all" },
     { "module": "leads", "action": "create", "scopeType": "all" },
@@ -341,6 +346,11 @@ User Login Request
   "iat": 1707871200
 }
 ```
+
+### 5.4 Ghost Access Prevention
+The system implements a multi-tier deactivation logic:
+1. **Middleware Check**: `authenticateToken` queries the `User` table to ensure `isActive: true`.
+2. **Hygiene Hook**: `checkPermission` verifies the JWT's `roleVersion` against the database's `Role.roleVersion`. If a mismatch is found (i.e., permissions were modified after logic), the session is instantly invalidated.
 
 ---
 
@@ -402,9 +412,11 @@ The system utilizes a centralized helper `getModuleWhereClause(user, module, act
 ```typescript
 // Conceptual implementation of getModuleWhereClause
 Scope: "own"        → { ownerId: currentUser.employeeId }
-Scope: "team"       → { ownerId: { in: [currentUser.employeeId, ...reportees] } }
+Scope: "team"       → { ownerId: { in: reporteeChain } } // Includes recursive subordinates
 Scope: "department" → { departmentId: currentUser.departmentId }
 Scope: "all"        → {} // Full access
+
+**Recursive Hierarchies**: The `team` scope uses a recursive CTE (via `getRecursiveReporteeIds`) to ensure that managers can see data from all levels of their hierarchy, not just immediate reports.
 ```
 
 ---
@@ -483,8 +495,9 @@ POST /api/auth/login
 | `POST` | `/:id/notes` | Yes | `leads:edit` | Add note to lead |
 
 **Key Business Rules:**
-- Setting status to `Lost` **requires** `lostReason` field
+- Setting status to `Lost` **requires** `lostReason` field (min 3 chars)
 - Lead conversion only works when status is `Won`
+- Duplicate project creation from the same lead is prevented via concurrency checks
 - Assignment creates an entry in `LeadAssignmentLog` for audit trail
 - Lead IDs are UUIDs for security (non-guessable URLs)
 
@@ -501,7 +514,8 @@ POST /api/auth/login
 | `DELETE` | `/:id` | Yes | `tasks:delete` | Delete task |
 
 **Key Business Rules:**
-- Setting status to `Completed` **requires** `completionNote` field
+- Setting status to `Completed` **requires** `completionNote` field (min 5 chars)
+- Tasks can **only** be assigned to active employees
 - Completing a task auto-sets `completedAt` timestamp
 - Re-opening a task nullifies `completedAt`
 - Tasks can be cross-linked to Lead, Project, or Product
@@ -572,7 +586,9 @@ POST /api/auth/login
 | `POST` | `/check-in` | Yes | `attendance:create` | Clock in (one per day enforced) |
 | `POST` | `/check-out` | Yes | `attendance:create` | Clock out |
 
-**Key Business Rule:** Only one check-in per day per employee (midnight-to-midnight window).
+**Key Business Rule:** 
+- Only one check-in per day per employee (midnight-to-midnight window).
+- Enforced via database-level `@@unique([employeeId, date])` constraint and application-level check.
 
 ---
 
@@ -583,7 +599,12 @@ POST /api/auth/login
 | `GET` | `/` | Yes | `attendance:view` | List leave requests (scoped) |
 | `POST` | `/` | Yes | `attendance:create` | Submit leave request |
 | `PUT` | `/:id/approve` | Yes | `attendance:approve` | Approve leave (captures approver ID) |
-| `PUT` | `/:id/reject` | Yes | `attendance:approve` | Reject leave (requires managerNote) |
+| `PUT` | `/:id/reject` | Yes | `attendance:approve` | Reject leave (requires managerNote, min 5 chars) |
+
+**Key Business Rule:** 
+- Employees cannot apply for leave with start dates in the past.
+- Overlapping leave requests (Pending or Approved) for the same employee are blocked.
+- Self-approval of leave requests is strictly forbidden.
 
 ---
 
