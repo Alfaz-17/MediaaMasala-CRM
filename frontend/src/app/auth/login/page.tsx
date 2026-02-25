@@ -30,7 +30,9 @@ function LoginForm() {
     }
   }, [session, status, router, sessionExpired])
 
-  if (status === "loading" || (status === "authenticated" && session)) {
+  // Only show the loading spinner if the session is truly valid and has no errors.
+  // If there's an error (like TokenExpired), we WANT to show the login form.
+  if (status === "loading" || (status === "authenticated" && session && !(session as any).error)) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>

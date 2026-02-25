@@ -5,7 +5,11 @@ import type { NextRequest } from "next/server"
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request })
 
-  // If no token and not on auth page, redirect to login
+  // Middleware config matcher already handles exclusion, but we add a safety check
+  const isAuthPage = request.nextUrl.pathname.startsWith("/auth")
+  if (isAuthPage) return NextResponse.next()
+
+  // If no token, redirect to login
   if (!token) {
     const loginUrl = new URL("/auth/login", request.url)
     return NextResponse.redirect(loginUrl)
