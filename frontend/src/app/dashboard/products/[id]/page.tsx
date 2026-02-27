@@ -19,7 +19,8 @@ import {
   Loader2,
   UserCheck,
   Briefcase,
-  Tag
+  Tag,
+  ExternalLink
 } from "lucide-react"
 
 interface Product {
@@ -96,14 +97,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
   if (!product) return null
 
-  const statusColor = product.status === "Active"
-    ? "bg-green-500/10 text-green-600"
-    : product.status === "Draft"
-    ? "bg-amber-500/10 text-amber-600"
-    : product.status === "Discontinued"
-    ? "bg-red-500/10 text-red-600"
-    : "bg-primary/10 text-primary"
-
   return (
     <div className="space-y-6 animate-in fade-in duration-700 pb-20">
       {/* Header */}
@@ -121,8 +114,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-border/40">
           <div>
             <div className="flex items-center gap-2 mb-2">
-               <Badge variant="outline" className={`text-[8px] font-black uppercase tracking-tighter border-none ${statusColor}`}>
-                  {product.status === "On_Hold" ? "On Hold" : product.status || "Active"}
+               <Badge variant="outline" className="text-[8px] font-black uppercase tracking-tighter border-primary/20 bg-primary/10 text-primary">
+                  {product.status || "Active"}
                </Badge>
                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">Product ID: #{product.id}</span>
             </div>
@@ -146,13 +139,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <CardContent className="p-6">
               {product.description ? (
                 <div 
-                  className="text-sm text-foreground/80 leading-relaxed prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm"
+                  className="text-sm text-foreground/80 leading-relaxed prose-content"
                   dangerouslySetInnerHTML={{ __html: product.description }}
                 />
               ) : (
-                <p className="text-sm text-foreground/80 leading-relaxed">
-                  No detailed description provided for this product.
-                </p>
+                <p className="text-sm text-muted-foreground italic">No detailed description provided for this product.</p>
               )}
             </CardContent>
           </Card>
@@ -170,16 +161,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               {!product.tasks || product.tasks.length === 0 ? (
                  <div className="p-12 text-center">
                     <p className="text-xs text-muted-foreground">No tasks linked to this product yet.</p>
-                    {canCreateTask && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-4 text-[10px] font-bold uppercase tracking-widest"
-                        onClick={() => router.push(`/dashboard/tasks/new?productId=${product.id}`)}
-                      >
-                        Create First Task
-                      </Button>
-                    )}
                  </div>
               ) : (
                 <div className="divide-y divide-border/20">
@@ -274,11 +255,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 )}
                 {canEditProduct && (
                   <Button 
-                    className="w-full justify-start text-[10px] font-bold uppercase tracking-widest h-9" 
+                    className="w-full justify-start text-[10px] font-bold uppercase tracking-widest h-9 opacity-50 cursor-not-allowed" 
                     variant="outline"
-                    onClick={() => router.push("/dashboard/products")}
+                    disabled
+                    title="Status updates coming soon"
                   >
-                     Edit Product (List View)
+                     Update Status (Use List View)
                   </Button>
                 )}
                 {canDeleteProduct && (

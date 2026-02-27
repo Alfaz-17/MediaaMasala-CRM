@@ -5,7 +5,8 @@ import {
   getAllPermissions, getRolePermissions, syncRolePermissions,
   getEmployees, createEmployee, updateEmployee, deleteEmployee, getPendingUsers,
   getHierarchy,
-  getPermissionMatrix
+  getPermissionMatrix,
+  batchSyncPermissions
 } from '../controllers/adminController';
 import { authenticateToken, checkPermission } from '../middleware/auth';
 
@@ -39,5 +40,6 @@ router.get('/permissions', checkPermission('employees', 'manage'), getAllPermiss
 router.get('/permissions-matrix', checkPermission('employees', 'manage'), getPermissionMatrix);
 router.get('/roles/:roleId/permissions', checkPermission('employees', 'view'), getRolePermissions);
 router.post('/roles/:roleId/permissions/sync', checkPermission('employees', 'manage'), syncRolePermissions);
+router.post('/permissions-matrix/batch-sync', checkPermission('employees', 'manage'), batchSyncPermissions);
 
 export default router;

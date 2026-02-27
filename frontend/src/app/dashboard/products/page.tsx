@@ -344,26 +344,33 @@ export default function ProductsPage() {
             ))
           ) : filteredProducts.length > 0 ? (
             filteredProducts.map(product => (
-              <Card key={product.id} className={cn("shadow-none border hover:border-primary/50 transition-none flex flex-col bg-background border-l-4", getProductStatusColor(product.status || ""))}>
+              <Card 
+                key={product.id} 
+                className={cn(
+                  "shadow-none border hover:border-primary/50 transition-all flex flex-col bg-background border-l-4 cursor-pointer", 
+                  getProductStatusColor(product.status || "")
+                )}
+                onClick={() => router.push(`/dashboard/products/${product.id}`)}
+              >
                 <CardHeader className="pb-3 border-b bg-muted/5">
                   <div className="flex justify-between items-start">
                     <div className="p-2 rounded-md bg-muted border">
                       <Box className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         {hasPermission("products", "edit") && (
-                          <DropdownMenuItem onClick={() => { setEditingProduct(product); setIsModalOpen(true); }} className="cursor-pointer">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingProduct(product); setIsModalOpen(true); }} className="cursor-pointer">
                             <Pencil className="mr-2 h-3.5 w-3.5" /> Edit details
                           </DropdownMenuItem>
                         )}
                         {hasPermission("products", "delete") && (
-                          <DropdownMenuItem className="text-destructive cursor-pointer" onClick={() => setProductToDelete(product)}>
+                          <DropdownMenuItem className="text-destructive cursor-pointer" onClick={(e) => { e.stopPropagation(); setProductToDelete(product); }}>
                             <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete product
                           </DropdownMenuItem>
                         )}
@@ -395,7 +402,7 @@ export default function ProductsPage() {
                     variant="outline" 
                     size="sm" 
                     className="w-full text-xs font-bold h-9 mt-auto" 
-                    onClick={() => setViewTasksProduct(product)}
+                    onClick={(e) => { e.stopPropagation(); setViewTasksProduct(product); }}
                   >
                     <ListTodo className="mr-2 h-4 w-4" /> View Associated Tasks
                   </Button>

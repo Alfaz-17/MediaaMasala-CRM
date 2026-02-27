@@ -598,3 +598,76 @@ export const getPermissionMatrix = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error fetching permission matrix' });
   }
 };
+
+export const batchSyncPermissions = async (req: Request, res: Response) => {
+  const { matrix } = req.body; // Expecting { roleId: [permIds] }
+  const user = (req as any).user;
+  const scope = (req as any).permissionScope;
+
+  if (!matrix || typeof matrix !== 'object') {
+    return res.status(400).json({ message: 'Invalid matrix data' });
+  }
+
+  try {
+    const roleIds = Object.keys(matrix).map(Number);
+    
+    // 1. Fetch all target roles to check scoping
+    const targetRoles = await prisma.role.findMany({
+      where: { id: { in: roleIds } }
+    });
+
+    // 2. Scope check
+    if (scope === 'department') {
+      const unauthorizedRole = targetRoles.find(r => r.departmentId !== user.departmentId);
+      if (unauthorizedRole) {
+          return res.status(403).json({ message: `Access denied: Role '${unauthorizedRole.name}' is outside your department` });
+      }
+    }
+    if (scope === 'team' || scope === 'own') {
+        return res.status(403).json({ message: 'Access denied: Insufficient scope to bulk update permissions' });
+    }
+
+    // 3. Perform batch update in a transaction
+    await prisma.$transaction(async (tx) => {
+      for (const [rId, pIds] of Object.entries(matrix)) {
+        const roleId = Number(rId);
+        const permissionIds = pIds as number[];
+
+        // Delete existing
+        await tx.rolePermission.deleteMany({ where: { roleId } });
+        
+        // Create new
+        if (permissionIds.length > 0) {
+          await tx.rolePermission.createMany({
+            data: permissionIds.map(pId => ({
+              roleId,
+              permissionId: pId
+            }))
+          });
+        }
+
+        // Bump roleVersion
+        await tx.role.update({
+          where: { id: roleId },
+          data: { roleVersion: { increment: 1 } as any }
+        });
+      }
+    }, {
+      timeout: 30000 // 30 seconds timeout to prevent P2028 errors during large batch updates
+    });
+
+    await logActivity({
+      employeeId: user.employeeId,
+      module: 'admin',
+      action: 'BATCH_SYNC_PERMISSIONS',
+      entityId: 'SYSTEM',
+      entityName: 'Permission Matrix',
+      description: `Bulk permission update performed for ${roleIds.length} roles`
+    });
+
+    res.json({ message: 'All permissions updated successfully' });
+  } catch (error) {
+    console.error('Batch sync error:', error);
+    res.status(500).json({ message: 'Error performing batch permission sync' });
+  }
+};
