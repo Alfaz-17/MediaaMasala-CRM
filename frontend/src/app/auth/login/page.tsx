@@ -19,11 +19,13 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const sessionExpired = searchParams.get("error") === "SessionExpired"
 
+  const isClearing = (sessionExpired || (session as any)?.error === "TokenExpired") && status !== "unauthenticated"
+  
   useEffect(() => {
     // If we are arriving at login because of an error (like SessionExpired),
     // force a clean sign out from NextAuth to clear the stale/invalid token
     // before allowing the user to sign in again.
-    if ((sessionExpired || (session as any)?.error === "TokenExpired") && status !== "unauthenticated") {
+    if (isClearing) {
       signOut({ redirect: false })
       return
     }
@@ -32,7 +34,7 @@ function LoginForm() {
     if (status === "authenticated" && session && !(session as any).error) {
       router.replace("/dashboard")
     }
-  }, [session, status, router, sessionExpired])
+  }, [session, status, router, isClearing])
 
   // Only show the loading spinner if the session is truly valid and has no errors.
   // If there's an error (like TokenExpired), we WANT to show the login form.
@@ -53,12 +55,14 @@ function LoginForm() {
       const result = await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        redirect: false, // Keep false to handle error message display manually
       })
 
       if (result?.error) {
         setError("Invalid email or password")
       } else {
+        // Successful login: perform a full refresh to clear any stale state
+        router.refresh()
         router.push("/dashboard")
       }
     } catch (err) {
@@ -91,6 +95,7 @@ function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading || isClearing}
             className="bg-background"
           />
         </div>
@@ -104,6 +109,7 @@ function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading || isClearing}
             className="bg-background"
           />
         </div>
@@ -112,9 +118,9 @@ function LoginForm() {
         <Button 
           type="submit" 
           className="w-full font-semibold" 
-          disabled={loading}
+          disabled={loading || isClearing}
         >
-          {loading ? "Signing in..." : "Sign In"}
+          {isClearing ? "Clearing Session..." : loading ? "Signing in..." : "Sign In"}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
