@@ -237,9 +237,13 @@ LeadSource:    Website | Referral | Cold_Call | Email
 
 AttendanceStatus: Present | Late | Half_Day | Absent
 
-LeaveType:     Sick | Casual | Annual | Unpaid
+LeaveType:     Sick | Casual | Annual | Unpaid | Vacation | Personal | Other
 
 LeaveStatus:   Pending | Approved | Rejected
+
+ProjectStatus: Planning | Active | On_Hold | Completed | Cancelled
+
+ProductStatus: Draft | Active | Discontinued
 ```
 
 ### 4.4 Cascade Rules (Data Integrity)
@@ -307,7 +311,7 @@ User Login Request
          │
          ▼
 ┌─────────────────┐
-│ Sign JWT (8hr)  │
+│ Sign JWT (48hr) │
 │ payload includes│
 │ roleVersion     │
 │ Return token +  │
