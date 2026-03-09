@@ -1,9 +1,9 @@
 import express from 'express';
 import { getActivityLogs } from '../controllers/activityController';
-import { authenticateToken, checkPermission } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
-router.get('/', authenticateToken, checkPermission('reports', 'generate'), getActivityLogs);
+router.get('/', authenticateToken, getActivityLogs);
 
 export default router;

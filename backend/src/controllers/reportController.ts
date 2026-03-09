@@ -7,7 +7,7 @@ import { safeHandler } from '../utils/handlerUtils';
 export const getSalesReport = safeHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { departmentId, employeeId, recursive } = req.query;
-  const scope = (req as any).permissionScope;
+  const scope = (req as any).permissionScope || 'own';
 
   let whereClause = await getModuleWhereClause(user, 'leads', 'view');
   if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
@@ -108,7 +108,7 @@ export const getSalesReport = safeHandler(async (req: Request, res: Response) =>
 export const getProductivityReport = safeHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { departmentId, employeeId, recursive } = req.query;
-  const scope = (req as any).permissionScope;
+  const scope = (req as any).permissionScope || 'own';
 
   // 1. Narrow down employees by attendance module scope (or similar)
   let employeeWhere: any = await getModuleWhereClause(user, 'attendance', 'view'); // Using attendance as proxy for "viewing employees stats"
@@ -232,7 +232,7 @@ export const getProductivityReport = safeHandler(async (req: Request, res: Respo
 export const getAttendanceReport = safeHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { departmentId, employeeId, recursive } = req.query;
-  const scope = (req as any).permissionScope;
+  const scope = (req as any).permissionScope || 'own';
 
   let whereClause = await getModuleWhereClause(user, 'attendance', 'view');
   if (whereClause === null) return res.status(403).json({ message: 'Access denied' });

@@ -129,7 +129,8 @@ export const checkPermission = (module: string, action: string) => {
         'edit': ['edit', 'write', 'manage', 'update'],
         'delete': ['delete', 'manage'],
         'create': ['create', 'add'],
-        'manage': ['manage', 'edit', 'delete']
+        'manage': ['manage', 'edit', 'delete'],
+        'generate': ['generate', 'view']
       };
 
       const allowedActions = actionAliases[action] || [action];

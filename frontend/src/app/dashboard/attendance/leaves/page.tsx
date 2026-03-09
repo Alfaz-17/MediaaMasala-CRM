@@ -245,9 +245,9 @@ export default function LeavesPage() {
                       <select id="type" name="type" required className="w-full rounded-md bg-muted/30 border border-border/40 text-xs p-2.5 outline-none focus:ring-1 focus:ring-primary">
                         <option value="">Select type...</option>
                         <option value="Sick">Sick Leave</option>
-                        <option value="Vacation">Vacation</option>
-                        <option value="Personal">Personal</option>
-                        <option value="Other">Other</option>
+                        <option value="Casual">Casual Leave</option>
+                        <option value="Annual">Annual Leave</option>
+                        <option value="Unpaid">Unpaid Leave</option>
                       </select>
                     </div>
                     <div className="space-y-2">
