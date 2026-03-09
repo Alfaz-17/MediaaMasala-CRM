@@ -23,7 +23,7 @@ import rateLimit from 'express-rate-limit';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 500, // Increased for a better UX in CRM
   message: 'Too many requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
@@ -32,7 +32,7 @@ const limiter = rateLimit({
 // SRE: Brute-force protection for sensitive endpoints
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30, // Increased for development/testing
+  max: 100, // Increased to avoid blocking legitimate users during testing/registration
   message: { message: 'Too many login attempts. Please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -40,6 +40,9 @@ const loginLimiter = rateLimit({
 
 const app = express();
 const port = process.env.PORT || 4000;
+
+// SRE: Trust proxy is essential for rate-limiting on Render/Vercel (Load Balancer IPs)
+app.set('trust proxy', 1);
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',') 
