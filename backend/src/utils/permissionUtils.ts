@@ -31,9 +31,18 @@ export async function getModuleWhereClause(
 
   const allowedActions = actionAliases[action] || [action];
 
-  const permission = permissions.find(
+  let permission = permissions.find(
     (p: any) => p.module === moduleName && allowedActions.includes(p.action)
   );
+
+  // --- REQUISITE: Fallback for Reports Module ---
+  // If no primary permission (leads/attendance) found, check if they have reports:view/generate.
+  // This allows the Reports page to function even if the user lacks direct access to the source module.
+  if (!permission && (moduleName === 'leads' || moduleName === 'attendance' || moduleName === 'eod' || moduleName === 'employees')) {
+    permission = permissions.find(
+      (p: any) => p.module === 'reports' && (p.action === 'view' || p.action === 'generate')
+    );
+  }
 
   if (!permission) return null; // Explicitly deny if no permission
 

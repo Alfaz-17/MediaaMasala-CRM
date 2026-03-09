@@ -8,6 +8,11 @@ let cachedToken: string | null = null;
 let lastFetchTime: number = 0;
 const CACHE_DURATION = 30000; // 30 seconds
 
+export const clearApiCache = () => {
+  cachedToken = null;
+  lastFetchTime = 0;
+};
+
 async function getAuthHeaders() {
   const now = Date.now();
   

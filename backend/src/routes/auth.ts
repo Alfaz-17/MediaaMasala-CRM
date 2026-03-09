@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { PrismaClient } from '@prisma/client';
+import { authenticateToken, clearPermissionCache } from '../middleware/auth';
 
 const router = express.Router();
 const localPrisma = new PrismaClient(); // Backup client for debugging
@@ -233,8 +234,11 @@ router.get('/me', async (req, res) => {
   }
 });
 
-router.post('/logout', (req, res) => {
-  // Client handles token removal, backend can log or invalidate if using redis
+router.post('/logout', authenticateToken, (req, res) => {
+  const user = (req as any).user;
+  if (user && user.id) {
+    clearPermissionCache(user.id);
+  }
   res.json({ message: 'Logged out successfully' });
 });
 

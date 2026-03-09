@@ -7,7 +7,9 @@ import { safeHandler } from '../utils/handlerUtils';
 export const getSalesReport = safeHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { departmentId, employeeId, recursive } = req.query;
-  const scope = (req as any).permissionScope || 'own';
+  
+  const leadsPerm = user.permissions?.find((p: any) => p.module === 'leads' && ['view', 'read'].includes(p.action));
+  const scope = (req as any).permissionScope || leadsPerm?.scope || 'own';
 
   let whereClause = await getModuleWhereClause(user, 'leads', 'view');
   if (whereClause === null) return res.status(403).json({ message: 'Access denied' });
@@ -108,10 +110,13 @@ export const getSalesReport = safeHandler(async (req: Request, res: Response) =>
 export const getProductivityReport = safeHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { departmentId, employeeId, recursive } = req.query;
-  const scope = (req as any).permissionScope || 'own';
+  
+  // Resolve scope from permissions
+  const empPerm = user.permissions?.find((p: any) => p.module === 'employees' && ['view', 'read'].includes(p.action));
+  const scope = (req as any).permissionScope || empPerm?.scope || 'own';
 
-  // 1. Narrow down employees by attendance module scope (or similar)
-  let employeeWhere: any = await getModuleWhereClause(user, 'attendance', 'view'); // Using attendance as proxy for "viewing employees stats"
+  // 1. Narrow down employees by employees module scope
+  let employeeWhere: any = await getModuleWhereClause(user, 'employees', 'view');
   if (employeeWhere === null) return res.status(403).json({ message: 'Access denied' });
 
   if (departmentId) {
@@ -232,7 +237,9 @@ export const getProductivityReport = safeHandler(async (req: Request, res: Respo
 export const getAttendanceReport = safeHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { departmentId, employeeId, recursive } = req.query;
-  const scope = (req as any).permissionScope || 'own';
+  
+  const attPerm = user.permissions?.find((p: any) => p.module === 'attendance' && ['view', 'read'].includes(p.action));
+  const scope = (req as any).permissionScope || attPerm?.scope || 'own';
 
   let whereClause = await getModuleWhereClause(user, 'attendance', 'view');
   if (whereClause === null) return res.status(403).json({ message: 'Access denied' });

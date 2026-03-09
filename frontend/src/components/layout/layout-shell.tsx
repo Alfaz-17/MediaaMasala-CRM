@@ -24,6 +24,7 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Providers } from "@/components/providers"
+import { clearApiCache } from "@/lib/api-client"
 
 interface LayoutShellProps {
   children: ReactNode
@@ -197,6 +198,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
     try {
       await fetch("/api/auth/logout", { method: "POST" })
     } catch {}
+    clearApiCache()
     signOut({ callbackUrl: "/auth/login" })
   }
 

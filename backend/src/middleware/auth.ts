@@ -10,6 +10,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const permissionCache = new Map<number, { data: any, timestamp: number }>();
 const CACHE_TTL = 2 * 60 * 1000; 
 
+export const clearPermissionCache = (userId: number) => {
+  permissionCache.delete(userId);
+};
+
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -25,56 +29,79 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         const now = Date.now();
 
         if (cached && (now - cached.timestamp < CACHE_TTL)) {
-            (req as any).fullUser = cached.data;
+            const data = cached.data;
+            const permissions = data.employee?.role?.permissions?.map((rp: any) => ({
+              module: rp.permission.module,
+              action: rp.permission.action,
+              scope: normalizeScope(rp.permission.scopeType)
+            })) || [];
+
+            (req as any).fullUser = data;
             (req as any).user = {
               ...user,
               id: user.id,
-              employeeId: cached.data.employee?.id || null,
-              departmentId: cached.data.employee?.departmentId || null,
-              role: cached.data.employee?.role?.code || null
+              employeeId: data.employee?.id || null,
+              departmentId: data.employee?.departmentId || null,
+              role: data.employee?.role?.code || null,
+              permissions
             };
             return next();
         }
 
-        const dbUser = await prisma.user.findUnique({ 
-          where: { id: user.id }, 
-          select: { 
-            isActive: true,
-            employee: {
-              select: {
-                id: true,
-                departmentId: true,
-                isActive: true,
-                role: {
-                  select: {
-                    code: true,
-                    permissions: {
-                      select: {
-                        permission: true
+        try {
+          const dbUser = await prisma.user.findUnique({ 
+            where: { id: user.id }, 
+            select: { 
+              isActive: true,
+              employee: {
+                select: {
+                  id: true,
+                  departmentId: true,
+                  isActive: true,
+                  role: {
+                    select: {
+                      code: true,
+                      permissions: {
+                        select: {
+                          permission: true
+                        }
                       }
                     }
                   }
                 }
               }
-            }
-          } 
-        });
+            } 
+          });
 
-        if (!dbUser || !dbUser.isActive) {
-            return res.status(401).json({ message: 'Account is disabled or session invalid' });
+          if (!dbUser || !dbUser.isActive) {
+              return res.status(401).json({ message: 'Account is disabled or session invalid' });
+          }
+
+          // Update cache
+          permissionCache.set(user.id, { data: dbUser, timestamp: now });
+
+          const permissions = dbUser.employee?.role?.permissions.map((rp: any) => ({
+            module: rp.permission.module,
+            action: rp.permission.action,
+            scope: normalizeScope(rp.permission.scopeType)
+          })) || [];
+
+          (req as any).fullUser = dbUser;
+          (req as any).user = {
+            ...user,
+            id: user.id,
+            employeeId: dbUser.employee?.id || null,
+            departmentId: dbUser.employee?.departmentId || null,
+            role: dbUser.employee?.role?.code || null,
+            permissions
+          };
+        } catch (dbError) {
+          console.error('Database connection error in authenticateToken:', dbError);
+          return res.status(503).json({ 
+            message: 'Database connection failed. Please try again in 30 seconds.',
+            error: process.env.NODE_ENV === 'development' ? dbError : undefined
+          });
         }
-
-        // Update cache
-        permissionCache.set(user.id, { data: dbUser, timestamp: now });
-
-        (req as any).fullUser = dbUser;
-        (req as any).user = {
-          ...user,
-          id: user.id,
-          employeeId: dbUser.employee?.id || null,
-          departmentId: dbUser.employee?.departmentId || null,
-          role: dbUser.employee?.role?.code || null
-        };
     }
 
     next();
