@@ -59,7 +59,10 @@ export async function getModuleWhereClause(
         ]
       };
     }
-    if (moduleName === 'tasks') return { OR: [{ assigneeId: user.employeeId }, { creatorId: user.employeeId }] };
+    if (moduleName === 'tasks') {
+      if (action === 'delete') return { creatorId: user.employeeId };
+      return { OR: [{ assigneeId: user.employeeId }, { creatorId: user.employeeId }] };
+    }
     if (moduleName === 'projects') {
       return { 
         OR: [
@@ -95,7 +98,10 @@ export async function getModuleWhereClause(
         ] 
       };
     }
-    if (moduleName === 'tasks') return { OR: [{ assigneeId: { in: teamIds } }, { creatorId: { in: teamIds } }] };
+    if (moduleName === 'tasks') {
+      if (action === 'delete') return { creatorId: { in: teamIds } };
+      return { OR: [{ assigneeId: { in: teamIds } }, { creatorId: { in: teamIds } }] };
+    }
     if (moduleName === 'projects') {
       return { 
         OR: [
@@ -135,7 +141,10 @@ export async function getModuleWhereClause(
         ] 
       };
     }
-    if (moduleName === 'tasks') return { OR: [{ assignee: { departmentId: user.departmentId } }, { creator: { departmentId: user.departmentId } }] };
+    if (moduleName === 'tasks') {
+      if (action === 'delete') return { creator: { departmentId: user.departmentId } };
+      return { OR: [{ assignee: { departmentId: user.departmentId } }, { creator: { departmentId: user.departmentId } }] };
+    }
     if (moduleName === 'projects') {
       return { 
         OR: [

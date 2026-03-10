@@ -5,13 +5,14 @@ export const dynamic = 'force-dynamic'
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
+import { toast } from "sonner"
 import { 
   Plus, 
   Search, 
@@ -25,7 +26,8 @@ import {
   Briefcase,
   Package,
   ShoppingBag,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from "lucide-react"
 import { ViewToggle, ViewType } from "@/components/dashboard/view-toggle"
 import { 
@@ -48,6 +50,8 @@ interface Task {
   lead?: { name: string; id: string }
   project?: { name: string; id: number }
   product?: { name: string; id: number }
+  assigneeId?: number
+  creatorId: number
   createdAt: string
 }
 
@@ -138,10 +142,14 @@ import { ManagementFilters } from "@/components/dashboard/management-filters"
 export default function TasksPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<'my' | 'all'>('all')
   const [view, setView] = useState<ViewType>("list")
-  const { hasPermission, canView, isLoading: permissionsLoading } = usePermissions()
+  const { hasPermission, canView, isLoading: permissionsLoading, permissions, isAdmin } = usePermissions()
+
+  const canDeletePermission = hasPermission("tasks", "delete")
+  const deleteScope = permissions.find((p: any) => p.module === "tasks" && p.action === "delete")?.scope || "own"
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all")
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("all")
   const [isRecursive, setIsRecursive] = useState<boolean>(false)
@@ -181,9 +189,10 @@ export default function TasksPage() {
     
     try {
       await apiClient.delete(`/tasks/${id}`)
-      router.refresh()
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
+      toast.success("Task deleted successfully")
     } catch (err: any) {
-      alert(err.message || "Deletion failed")
+      toast.error(err.message || "Deletion failed")
     }
   }
 
@@ -353,6 +362,11 @@ export default function TasksPage() {
                   <tbody className="divide-y divide-border/10">
                     {filteredTasks.map((task) => {
                       const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'Completed'
+                      const canDeleteTask = isAdmin || (canDeletePermission && (
+                        deleteScope === 'all' || 
+                        (deleteScope === 'own' && task.creatorId === (session?.user as any)?.employeeId)
+                      ))
+
                       return (
                         <tr key={task.id} className="group hover:bg-muted/10 transition-colors">
                           <td className="px-6 py-4">
@@ -401,14 +415,26 @@ export default function TasksPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right">
-                             <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
-                                onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
-                              >
-                                Access
-                              </Button>
+                             <div className="flex items-center justify-end gap-2">
+                               <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                                  onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
+                                >
+                                  Access
+                                </Button>
+                                {canDeleteTask && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleDelete(task.id, task.title)}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
                           </td>
                         </tr>
                       )
@@ -476,17 +502,33 @@ export default function TasksPage() {
                             {task.assignee ? task.assignee.firstName : "Unassigned"}
                           </span>
                         </div>
+                      </div>
+                      <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3">
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="sm" 
-                          className="h-8 px-0 text-primary font-bold text-[10px] uppercase tracking-widest hover:bg-transparent"
+                          className="flex-1 h-8 text-[10px] font-bold uppercase tracking-wider rounded-lg border-border/40 hover:bg-muted/50 transition-all"
                           onClick={() => router.push(`/dashboard/tasks/${task.id}`)}
                         >
                           Details →
                         </Button>
+                        {(isAdmin || (canDeletePermission && (
+                          deleteScope === 'all' || 
+                          (deleteScope === 'own' && task.creatorId === (session?.user as any)?.employeeId)
+                        ))) && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive/40 hover:text-destructive hover:bg-destructive/5"
+                            onClick={() => handleDelete(task.id, task.title)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
+
                 )
               })}
             </div>

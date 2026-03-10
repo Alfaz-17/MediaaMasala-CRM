@@ -7,6 +7,7 @@ import { useRouter, useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
@@ -14,6 +15,7 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { Clock, Calendar, Building, CheckCircle2, ShoppingBag, Briefcase, Package } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface Task {
   id: string
@@ -29,6 +31,8 @@ interface Task {
   product?: { id: number; name: string; category: string }
   completionNote?: string
   completedAt?: string
+  assigneeId?: number
+  creatorId: number
   createdAt: string
 }
 
@@ -65,10 +69,21 @@ export default function TaskDetailPage() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const { hasPermission, canView, isLoading: permissionsLoading } = usePermissions()
+  const queryClient = useQueryClient()
+  const { hasPermission, canView, isLoading: permissionsLoading, permissions, isAdmin } = usePermissions()
 
   const canEdit = hasPermission("tasks", "edit")
-  const canDelete = hasPermission("tasks", "delete")
+  const canDeletePermission = hasPermission("tasks", "delete")
+  const deleteScope = permissions.find((p: any) => p.module === "tasks" && p.action === "delete")?.scope || "own"
+
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    description: "",
+    priority: "",
+    dueDate: ""
+  })
 
   // Completion modal state
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false)
@@ -104,6 +119,7 @@ export default function TaskDetailPage() {
     try {
       await apiClient.patch(`/tasks/${id}`, { status: newStatus })
       setTask(prev => prev ? { ...prev, status: newStatus } : null)
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
       toast.success(`Task marked as ${newStatus}`)
     } catch (err) {
       console.error("Error updating status:", err)
@@ -121,6 +137,7 @@ export default function TaskDetailPage() {
         status: tempStatus, 
         completionNote: completionNote 
       })
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
       setTask(prev => prev ? { 
         ...prev, 
         status: tempStatus, 
@@ -135,12 +152,41 @@ export default function TaskDetailPage() {
     }
   }
 
+  const handleUpdateTask = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setUpdating(true)
+    try {
+      await apiClient.patch(`/tasks/${id}`, {
+        title: editFormData.title,
+        description: editFormData.description,
+        priority: editFormData.priority,
+        dueDate: new Date(editFormData.dueDate).toISOString()
+      })
+      setTask(prev => prev ? { 
+        ...prev, 
+        title: editFormData.title,
+        description: editFormData.description,
+        priority: editFormData.priority,
+        dueDate: editFormData.dueDate
+      } : null)
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
+      setIsEditModalOpen(false)
+      toast.success("Task updated successfully")
+    } catch (err: any) {
+      console.error("Error updating task:", err)
+      toast.error(err.message || "Failed to update task")
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   const handleDeleteTask = async () => {
     if (!confirm("Are you sure you want to delete this task?")) return
     
     setDeleting(true)
     try {
       await apiClient.delete(`/tasks/${id}`)
+      queryClient.invalidateQueries({ queryKey: ["tasks"] })
       toast.success("Task deleted successfully")
       router.push("/dashboard/tasks")
     } catch (err) {
@@ -153,7 +199,16 @@ export default function TaskDetailPage() {
   if (loading) return <div className="p-10 animate-pulse text-center text-gray-400 font-medium">Loading Task Details...</div>
   if (!task) return <div className="p-10 text-center">Task not found.</div>
 
+  const isCreator = task.creatorId === (session?.user as any)?.employeeId
   const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'Completed'
+
+  // Refined Delete check: Admin can always delete. Others depend on scope.
+  const canDelete = isAdmin || (canDeletePermission && (
+    deleteScope === 'all' || 
+    (deleteScope === 'own' && isCreator)
+    // Team/Department scope checks could be added here for 100% accuracy, 
+    // but creator-only is the safest fallback and handles the user's specific request.
+  ))
 
   return (
     <PermissionGuard module="tasks" action="view">
@@ -177,11 +232,25 @@ export default function TaskDetailPage() {
                 {task.priority} Priority
            </Badge>
            <div className="h-6 w-[1px] bg-border/40 mx-1 hidden md:block" />
-           {canEdit && (
-             <Button variant="outline" className="rounded-lg font-semibold text-xs h-9 px-4 border-border/60">
-               Edit Task
-             </Button>
-           )}
+            {canEdit && (
+              <Button 
+                variant="outline" 
+                className="rounded-lg font-semibold text-xs h-9 px-4 border-border/60"
+                onClick={() => {
+                  if (task) {
+                    setEditFormData({
+                      title: task.title,
+                      description: task.description || "",
+                      priority: task.priority,
+                      dueDate: new Date(task.dueDate).toISOString().split('T')[0]
+                    })
+                    setIsEditModalOpen(true)
+                  }
+                }}
+              >
+                Edit Task
+              </Button>
+            )}
             {canDelete && (
               <Button 
                 variant="ghost" 
@@ -399,6 +468,78 @@ export default function TaskDetailPage() {
                    {updating ? "Updating..." : "Complete"}
                  </Button>
               </div>
+           </div>
+        </div>
+      )}
+      {/* Edit Task Modal Overlay */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-background/40 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+           <div className="max-w-md w-full bg-card rounded-2xl border border-border/40 shadow-2xl p-8 space-y-6 relative overflow-hidden animate-in zoom-in duration-300">
+              <div className="text-center">
+                 <h3 className="text-lg font-semibold tracking-tight text-foreground">Edit Task Details</h3>
+                 <p className="text-muted-foreground font-medium text-xs mt-1.5 opacity-80">Update the parameters for this task.</p>
+              </div>
+              
+              <form onSubmit={handleUpdateTask} className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Task Title</Label>
+                  <Input 
+                    required
+                    value={editFormData.title}
+                    onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                    className="h-10 bg-muted/30 border-border/40 font-semibold text-xs rounded-lg"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Description</Label>
+                  <textarea 
+                    className="w-full h-24 rounded-lg bg-muted/30 border border-border/40 font-medium text-xs p-3 outline-none focus:ring-1 focus:ring-primary/40 resize-none leading-relaxed"
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Priority</Label>
+                    <div className="relative">
+                      <select 
+                        className="w-full h-10 rounded-lg bg-muted/30 border border-border/40 font-semibold uppercase tracking-wider text-[10px] px-4 outline-none focus:ring-1 focus:ring-primary/40 appearance-none cursor-pointer"
+                        value={editFormData.priority}
+                        onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value })}
+                      >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-30 text-[8px]">▼</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Due Date</Label>
+                    <Input 
+                      type="date"
+                      required
+                      value={editFormData.dueDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, dueDate: e.target.value })}
+                      className="h-10 bg-muted/30 border-border/40 font-semibold text-xs rounded-lg tabular-nums"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 pt-4">
+                  <Button type="button" variant="ghost" className="flex-1 rounded-lg font-semibold text-[10px] uppercase tracking-wider h-10" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+                  <Button 
+                    type="submit"
+                    className="flex-1 rounded-lg font-semibold text-[10px] uppercase tracking-wider h-10 shadow-lg shadow-primary/10" 
+                    disabled={updating}
+                  >
+                    {updating ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
            </div>
         </div>
       )}
