@@ -78,7 +78,7 @@ function LoginForm() {
         {sessionExpired && (
           <div className="rounded-md bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
             <span className="text-base leading-none">⚠️</span>
-            <span>Your session has expired. Please sign in again to continue.</span>
+            <span>Your session has expired. Please sign in again.</span>
           </div>
         )}
         {error && (

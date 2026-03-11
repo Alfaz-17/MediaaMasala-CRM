@@ -121,7 +121,7 @@ async function handleResponse(response: Response, method?: string) {
         isSigningOut = true;
         const { signOut } = await import("next-auth/react");
         signOut({ 
-          callbackUrl: "/auth/login?error=SessionExpired",
+          callbackUrl: "/auth/login",
           redirect: true 
         });
       }

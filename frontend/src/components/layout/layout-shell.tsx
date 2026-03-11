@@ -163,7 +163,7 @@ export function LayoutShell({ children }: LayoutShellProps) {
     if ((session as any)?.error === "TokenExpired" && !pathname.startsWith("/auth")) {
       // Use redirect: true to ensure the page actually refreshes and clears state
       signOut({ 
-        callbackUrl: "/auth/login?error=SessionExpired",
+        callbackUrl: "/auth/login",
         redirect: true 
       });
     }
