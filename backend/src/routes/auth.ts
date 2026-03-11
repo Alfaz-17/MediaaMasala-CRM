@@ -77,7 +77,7 @@ router.post('/login', async (req, res) => {
         // The checkPermission middleware fetches fresh permissions from the DB on every request.
       },
       JWT_SECRET,
-      { expiresIn: '48h' }
+      { expiresIn: '7d' }
     );
 
     res.json({

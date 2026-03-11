@@ -60,15 +60,19 @@ export const authOptions: NextAuthOptions = {
         token.department = user.department;
         token.accessToken = user.token;
         token.employeeId = user.employee?.id;
-        // Record when backend JWT expires
-        token.tokenExpiry = Date.now() + JWT_EXPIRY_HOURS * 60 * 60 * 1000;
         delete token.error; // Clear any previous errors on fresh login
       }
 
-      // If the backend token has expired, flag it so the client can sign out
+      // Check if it's expired now (Sliding Session)
+      // If the token is already flagged as expired, don't renew it
+      if (token.error === "TokenExpired") return token;
+
       if (token.tokenExpiry && Date.now() > token.tokenExpiry) {
         return { ...token, error: "TokenExpired" };
       }
+
+      // Reset the 48-hour window on every access
+      token.tokenExpiry = Date.now() + JWT_EXPIRY_HOURS * 60 * 60 * 1000;
 
       return token;
     },
