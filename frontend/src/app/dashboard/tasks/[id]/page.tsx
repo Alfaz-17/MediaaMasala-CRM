@@ -16,6 +16,7 @@ import { Clock, Calendar, Building, CheckCircle2, ShoppingBag, Briefcase, Packag
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 interface Task {
   id: string
@@ -273,12 +274,16 @@ export default function TaskDetailPage() {
              </CardHeader>
              <CardContent className="pt-6 pb-8 space-y-6">
                 <div className="space-y-3">
-                   <p className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">What to do</p>
-                   <div className="bg-muted/30 p-6 rounded-xl border border-border/30 min-h-[160px]">
-                      <p className="text-[13px] font-medium text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                        {task.description || "No description given."}
-                      </p>
-                   </div>
+                    <div className="bg-muted/30 p-6 rounded-xl border border-border/30 min-h-[160px] prose prose-sm prose-invert max-w-none">
+                       {task.description ? (
+                         <div 
+                           className="text-[13px] font-medium text-foreground/80 leading-relaxed rich-text-content"
+                           dangerouslySetInnerHTML={{ __html: task.description }}
+                         />
+                       ) : (
+                         <p className="text-[13px] font-medium text-foreground/80 leading-relaxed whitespace-pre-wrap">No description given.</p>
+                       )}
+                    </div>
                 </div>
 
                 {task.status === 'Completed' && (
@@ -287,7 +292,10 @@ export default function TaskDetailPage() {
                         <span className="text-success text-xs">✅</span>
                         <span className="text-[9px] font-bold text-success uppercase tracking-widest">Completion notes</span>
                      </div>
-                     <p className="text-xs font-semibold text-success/80 italic leading-relaxed mb-4">&quot;{task.completionNote}&quot;</p>
+                     <div 
+                        className="text-xs font-semibold text-success/80 italic leading-relaxed mb-4 rich-text-content"
+                        dangerouslySetInnerHTML={{ __html: task.completionNote || "" }}
+                     />
                      <div className="flex items-center gap-2 text-[10px] font-bold text-success/40 uppercase tracking-widest tabular-nums">
                         <Clock className="h-3 w-3" /> Completed on {new Date(task.completedAt!).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
                      </div>
@@ -451,12 +459,11 @@ export default function TaskDetailPage() {
               </div>
               <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Completion notes</Label>
-                 <textarea 
-                    className="w-full h-32 rounded-lg bg-muted/30 border border-border/40 font-medium text-xs p-3.5 outline-none focus:ring-1 focus:ring-primary/40 resize-none tabular-nums"
-                    placeholder="Provide a summary of the outcome..."
-                    value={completionNote}
-                    onChange={(e) => setCompletionNote(e.target.value)}
-                 />
+                  <RichTextEditor 
+                     placeholder="Provide a summary of the outcome..."
+                     value={completionNote}
+                     onChange={setCompletionNote}
+                  />
               </div>
               <div className="flex gap-2.5 pt-2">
                  <Button variant="ghost" className="flex-1 rounded-lg font-semibold text-[10px] uppercase tracking-wider h-10" onClick={() => setIsCompleteModalOpen(false)}>Cancel</Button>
@@ -493,10 +500,10 @@ export default function TaskDetailPage() {
 
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Description</Label>
-                  <textarea 
-                    className="w-full h-24 rounded-lg bg-muted/30 border border-border/40 font-medium text-xs p-3 outline-none focus:ring-1 focus:ring-primary/40 resize-none leading-relaxed"
+                  <RichTextEditor
                     value={editFormData.description}
-                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    onChange={(val) => setEditFormData({ ...editFormData, description: val })}
+                    placeholder="More details about the task..."
                   />
                 </div>
 
@@ -543,6 +550,14 @@ export default function TaskDetailPage() {
            </div>
         </div>
       )}
+      <style jsx global>{`
+        .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content p { margin-bottom: 0.5rem; }
+        .rich-text-content h1 { font-size: 1.25rem; font-weight: bold; margin: 1rem 0 0.5rem; }
+        .rich-text-content h2 { font-size: 1.1rem; font-weight: bold; margin: 0.75rem 0 0.4rem; }
+        .rich-text-content a { color: hsl(var(--primary)); text-decoration: underline; }
+      `}</style>
     </div>
     </PermissionGuard>
   )

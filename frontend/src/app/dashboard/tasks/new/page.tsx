@@ -15,6 +15,7 @@ import { apiClient } from "@/lib/api-client"
 import { Briefcase, Package, ShoppingBag, ArrowRight, User } from "lucide-react"
 import { toast } from "sonner"
 import { usePermissions } from "@/hooks/use-permissions"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 const PRIORITIES = ["High", "Medium", "Low"]
 
@@ -167,14 +168,10 @@ function NewTaskContent() {
 
             <div className="space-y-2">
               <Label htmlFor="description" className="text-[10px] font-bold uppercase text-muted-foreground/40 tracking-widest pl-1">Description</Label>
-              <textarea
-                id="description"
-                name="description"
+              <RichTextEditor
                 value={formData.description}
-                onChange={handleChange}
-                rows={4}
+                onChange={(val) => setFormData({ ...formData, description: val })}
                 placeholder="More details about the task..."
-                className="flex w-full rounded-xl border border-border/20 bg-muted/10 px-5 py-4 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/20 resize-none transition-all shadow-inner leading-relaxed"
               />
             </div>
 

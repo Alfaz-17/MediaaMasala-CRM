@@ -25,6 +25,7 @@ import {
   Calendar
 } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 interface Lead {
   id: string
@@ -448,11 +449,10 @@ export default function LeadDetailPage() {
 
                   <Card className="rounded-xl border-border/40 shadow-xs overflow-hidden bg-card">
                      <div className="p-4 space-y-3">
-                        <textarea
+                        <RichTextEditor
                           placeholder="Write a note..."
-                          className="w-full min-h-[100px] bg-muted/20 rounded-lg p-3.5 text-xs font-medium border-none focus:ring-1 focus:ring-primary/30 outline-none transition-all placeholder:text-muted-foreground/30 resize-none tabular-nums"
                           value={newNote}
-                          onChange={(e) => setNewNote(e.target.value)}
+                          onChange={setNewNote}
                         />
                         <div className="flex justify-between items-center bg-muted/5 p-1.5 rounded-lg border border-border/40">
                           <label className="flex items-center gap-2.5 px-2 cursor-pointer group">
@@ -493,7 +493,10 @@ export default function LeadDetailPage() {
                                </div>
                                {note.isPrivate && <Badge variant="warning" className="text-[8px] h-3.5 uppercase font-bold tracking-wider px-1.5 leading-none border-none shadow-xs">Private</Badge>}
                             </div>
-                            <p className="text-[11px] font-medium text-foreground/70 leading-relaxed whitespace-pre-wrap mt-1">{note.content}</p>
+                            <div 
+                              className="text-[11px] font-medium text-foreground/70 leading-relaxed rich-text-content mt-1"
+                              dangerouslySetInnerHTML={{ __html: note.content }}
+                            />
                           </div>
                         </div>
                       </div>
@@ -562,12 +565,12 @@ export default function LeadDetailPage() {
                       </div>
                       <div className="space-y-1.5">
                           <Label className="text-[9px] font-bold uppercase tracking-wider opacity-60 ml-0.5">What to do?</Label>
-                          <textarea 
-                            placeholder="What needs to be done..."
-                            className="w-full min-h-[100px] bg-white/10 border-none rounded-lg p-3 text-[11px] font-medium text-white focus:ring-1 focus:ring-white/30 outline-none placeholder:text-white/20 resize-none"
-                            value={followUpAction}
-                            onChange={(e) => setFollowUpAction(e.target.value)}
-                          />
+                           <RichTextEditor 
+                             placeholder="What needs to be done..."
+                             value={followUpAction}
+                             onChange={setFollowUpAction}
+                             className="rich-text-dark"
+                           />
                       </div>
                       <Button 
                         className="w-full bg-white text-primary hover:bg-white/95 font-bold h-9 rounded-lg uppercase tracking-wider text-[10px]"
@@ -705,10 +708,10 @@ export default function LeadDetailPage() {
               {lostReason === 'Other' && (
                 <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Description</Label>
-                  <textarea 
-                    className="w-full h-20 rounded-lg bg-muted/30 border border-border/40 font-medium text-xs p-3 outline-none focus:ring-1 focus:ring-primary/40 resize-none"
+                  <RichTextEditor 
+                    value={lostReason.startsWith('Other: ') ? lostReason.replace('Other: ', '') : ''} 
+                    onChange={(val) => setLostReason('Other: ' + val)}
                     placeholder="Provide additional context..."
-                    onChange={(e) => setLostReason('Other: ' + e.target.value)}
                   />
                 </div>
               )}
@@ -749,12 +752,11 @@ export default function LeadDetailPage() {
                  </div>
                  <div className="space-y-1.5">
                     <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Initial Brief</Label>
-                    <textarea 
-                      className="w-full h-24 rounded-lg bg-muted/30 border border-border/40 font-medium text-xs p-3 outline-none focus:ring-1 focus:ring-primary/40 resize-none leading-relaxed"
-                      placeholder="Outline the primary deliverables..."
-                      value={projectDesc}
-                      onChange={(e) => setProjectDesc(e.target.value)}
-                    />
+                     <RichTextEditor 
+                       placeholder="Outline the primary deliverables..."
+                       value={projectDesc}
+                       onChange={setProjectDesc}
+                     />
                  </div>
               </div>
               <div className="flex gap-2.5 pt-2">
@@ -811,6 +813,21 @@ export default function LeadDetailPage() {
            </div>
         </div>
       )}
+      <style jsx global>{`
+        .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content p { margin-bottom: 0.5rem; }
+        .rich-text-content h1 { font-size: 1.25rem; font-weight: bold; margin: 1rem 0 0.5rem; }
+        .rich-text-content h2 { font-size: 1.1rem; font-weight: bold; margin: 0.75rem 0 0.4rem; }
+        .rich-text-content a { color: hsl(var(--primary)); text-decoration: underline; }
+        .rich-text-dark .ql-container { border: none !important; background: rgba(255,255,255,0.05); border-radius: 0.5rem; color: white; }
+        .rich-text-dark .ql-editor { font-size: 11px; min-h: 100px; }
+        .rich-text-dark .ql-editor.ql-blank::before { color: rgba(255,255,255,0.3) !important; font-style: normal; }
+        .rich-text-dark .ql-toolbar { border: none !important; background: rgba(255,255,255,0.1); border-radius: 0.5rem 0.5rem 0 0; margin-bottom: 2px; }
+        .rich-text-dark .ql-stroke { stroke: rgba(255,255,255,0.6) !important; }
+        .rich-text-dark .ql-fill { fill: rgba(255,255,255,0.6) !important; }
+        .rich-text-dark .ql-picker { color: rgba(255,255,255,0.6) !important; }
+      `}</style>
     </div>
     </PermissionGuard>
   )

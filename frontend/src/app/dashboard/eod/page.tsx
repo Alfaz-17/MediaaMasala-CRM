@@ -21,6 +21,7 @@ import {
   History
 } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 interface EodReport {
   id: number
@@ -192,12 +193,10 @@ export default function EodPage() {
 
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest pl-1">Work Summary</Label>
-                  <textarea 
-                    className="w-full h-48 rounded-xl bg-muted/20 border border-border/40 font-medium text-sm p-4 outline-none focus:ring-1 focus:ring-primary/40 leading-relaxed"
-                    placeholder="Describe your achievements, challenges, and plan for tomorrow..."
+                  <RichTextEditor
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    required
+                    onChange={setContent}
+                    placeholder="Describe your achievements, challenges, and plan for tomorrow..."
                   />
                 </div>
 
@@ -272,9 +271,10 @@ export default function EodPage() {
                               <MessageSquare className="h-3 w-3" />
                               <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Report Details</span>
                           </div>
-                          <p className="text-xs font-medium text-foreground/70 leading-relaxed italic line-clamp-4">
-                              &quot;{report.content}&quot;
-                          </p>
+                          <div 
+                              className="text-xs font-medium text-foreground/70 leading-relaxed rich-text-content line-clamp-4"
+                              dangerouslySetInnerHTML={{ __html: report.content }}
+                          />
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/20">
@@ -295,6 +295,14 @@ export default function EodPage() {
           </div>
         )}
       </div>
+      <style jsx global>{`
+        .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content p { margin-bottom: 0.5rem; }
+        .rich-text-content h1 { font-size: 1.25rem; font-weight: bold; margin: 1rem 0 0.5rem; }
+        .rich-text-content h2 { font-size: 1.1rem; font-weight: bold; margin: 0.75rem 0 0.4rem; }
+        .rich-text-content a { color: hsl(var(--primary)); text-decoration: underline; }
+      `}</style>
     </PermissionGuard>
   )
 }

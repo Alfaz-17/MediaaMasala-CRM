@@ -618,6 +618,14 @@ export default function ProjectsPage() {
           </DialogContent>
         </Dialog>
       </div>
+      <style jsx global>{`
+        .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content p { margin-bottom: 0.5rem; }
+        .rich-text-content h1 { font-size: 1.25rem; font-weight: bold; margin: 1rem 0 0.5rem; }
+        .rich-text-content h2 { font-size: 1.1rem; font-weight: bold; margin: 0.75rem 0 0.4rem; }
+        .rich-text-content a { color: hsl(var(--primary)); text-decoration: underline; }
+      `}</style>
     </PermissionGuard>
   )
 }

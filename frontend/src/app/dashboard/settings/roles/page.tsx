@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { apiClient } from "@/lib/api-client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { PermissionGuard } from "@/components/permission-guard"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 interface Role {
   id: number
@@ -158,7 +159,10 @@ export default function RolesPage() {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground/60 font-medium mt-1.5 line-clamp-2 leading-relaxed">{role.description || "Operational parameters not defined."}</p>
+                  <div 
+                    className="text-[11px] text-muted-foreground/60 font-medium mt-1.5 line-clamp-2 leading-relaxed rich-text-content"
+                    dangerouslySetInnerHTML={{ __html: role.description || "Operational parameters not defined." }}
+                  />
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-border/20">
                   <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-wider">
@@ -208,10 +212,9 @@ export default function RolesPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Authority Scope</Label>
-                  <textarea 
+                  <RichTextEditor 
                     value={description} 
-                    onChange={(e) => setDescription(e.target.value)} 
-                    className="w-full min-h-[90px] border border-border/40 rounded-lg p-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 bg-card resize-none"
+                    onChange={setDescription} 
                     placeholder="Define the scope and permissions for this designation..."
                   />
                 </div>
@@ -236,6 +239,14 @@ export default function RolesPage() {
           </div>
         )}
       </div>
+      <style jsx global>{`
+        .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content p { margin-bottom: 0.5rem; }
+        .rich-text-content h1 { font-size: 1.25rem; font-weight: bold; margin: 1rem 0 0.5rem; }
+        .rich-text-content h2 { font-size: 1.1rem; font-weight: bold; margin: 0.75rem 0 0.4rem; }
+        .rich-text-content a { color: hsl(var(--primary)); text-decoration: underline; }
+      `}</style>
     </PermissionGuard>
   )
 }

@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { apiClient } from "@/lib/api-client"
 import { usePermissions } from "@/hooks/use-permissions"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 interface Department {
   id: number
@@ -119,7 +120,10 @@ export default function DepartmentsPage() {
                   </Badge>
                   {!dept.isActive && <Badge variant="destructive" className="text-[8px] font-bold uppercase tracking-wider py-0.5 h-4">Decommissioned</Badge>}
                 </div>
-                <p className="text-[11px] text-muted-foreground/60 font-medium line-clamp-1">{dept.description || "Operational directive not specified."}</p>
+                <div 
+                  className="text-[11px] text-muted-foreground/60 font-medium line-clamp-1 rich-text-content"
+                  dangerouslySetInnerHTML={{ __html: dept.description || "Operational directive not specified." }}
+                />
               </div>
               <div className="flex items-center gap-10 px-8 border-l border-r border-border/40">
                 <div className="text-center">
@@ -157,10 +161,9 @@ export default function DepartmentsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Operational Directive</Label>
-                <textarea 
+                <RichTextEditor 
                   value={description} 
-                  onChange={(e) => setDescription(e.target.value)} 
-                  className="w-full min-h-[90px] border border-border/40 rounded-lg p-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 bg-card resize-none"
+                  onChange={setDescription} 
                   placeholder="Define department scope and objectives..."
                 />
               </div>
@@ -184,6 +187,14 @@ export default function DepartmentsPage() {
           </Card>
         </div>
       )}
+      <style jsx global>{`
+        .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+        .rich-text-content p { margin-bottom: 0.5rem; }
+        .rich-text-content h1 { font-size: 1.25rem; font-weight: bold; margin: 1rem 0 0.5rem; }
+        .rich-text-content h2 { font-size: 1.1rem; font-weight: bold; margin: 0.75rem 0 0.4rem; }
+        .rich-text-content a { color: hsl(var(--primary)); text-decoration: underline; }
+      `}</style>
     </div>
   )
 }

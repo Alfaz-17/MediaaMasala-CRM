@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 const LEAD_SOURCES = ["Website", "Referral", "Cold_Call", "Email"]
 
@@ -148,14 +149,10 @@ export default function NewLeadPage() {
 
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="notes" className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-wider pl-1">Initial Notes / Context</Label>
-              <textarea
-                id="notes"
-                name="notes"
+              <RichTextEditor
                 value={formData.notes}
-                onChange={handleChange}
-                rows={3}
+                onChange={(val) => setFormData({ ...formData, notes: val })}
                 placeholder="Any specific details about this lead..."
-                className="flex w-full rounded-lg border border-border/40 bg-muted/5 px-4 py-3 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 resize-none"
               />
             </div>
           </CardContent>

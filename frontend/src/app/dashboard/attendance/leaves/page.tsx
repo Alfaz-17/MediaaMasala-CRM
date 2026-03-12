@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { PermissionGuard } from "@/components/permission-guard"
 import { useQuery } from "@tanstack/react-query"
 import { ManagementFilters } from "@/components/dashboard/management-filters"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,8 @@ export default function LeavesPage() {
   const todayStr = new Date().toLocaleDateString('en-CA')
   const [formStartDate, setFormStartDate] = useState(todayStr)
   const [formEndDate, setFormEndDate] = useState(todayStr)
+  const [formType, setFormType] = useState("")
+  const [formReason, setFormReason] = useState("")
 
   const { data: leaves = [], isLoading, refetch } = useQuery<LeaveRequest[]>({
     queryKey: ["leaves", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive, activeTab],
@@ -89,17 +92,20 @@ export default function LeavesPage() {
   const handleSubmitLeave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSubmitting(true)
-    const formData = new FormData(e.currentTarget)
     const payload = {
-      startDate: formData.get("startDate"),
-      endDate: formData.get("endDate"),
-      type: formData.get("type"),
-      reason: formData.get("reason"),
+      startDate: formStartDate,
+      endDate: formEndDate,
+      type: formType,
+      reason: formReason,
     }
 
     try {
       await apiClient.post("/leaves", payload)
       toast.success("Leave request submitted")
+      setFormStartDate(todayStr)
+      setFormEndDate(todayStr)
+      setFormType("")
+      setFormReason("")
       setIsSubmitOpen(false)
       refetch()
     } catch (err: any) {
@@ -242,7 +248,7 @@ export default function LeavesPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="type" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Leave Type</Label>
-                      <select id="type" name="type" required className="w-full rounded-md bg-muted/30 border border-border/40 text-xs p-2.5 outline-none focus:ring-1 focus:ring-primary">
+                      <select id="type" name="type" required value={formType} onChange={(e) => setFormType(e.target.value)} className="w-full rounded-md bg-muted/30 border border-border/40 text-xs p-2.5 outline-none focus:ring-1 focus:ring-primary">
                         <option value="">Select type...</option>
                         <option value="Sick">Sick Leave</option>
                         <option value="Casual">Casual Leave</option>
@@ -252,11 +258,15 @@ export default function LeavesPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reason" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reason</Label>
-                      <textarea id="reason" name="reason" rows={3} required className="w-full rounded-md bg-muted/30 border border-border/40 text-xs p-3 outline-none focus:ring-1 focus:ring-primary resize-none" placeholder="Briefly explain your request..." />
+                      <RichTextEditor
+                        value={formReason}
+                        onChange={setFormReason}
+                        placeholder="Briefly explain your request..."
+                      />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit" disabled={submitting} className="w-full rounded-xl font-bold uppercase tracking-widest text-[11px] h-11 shadow-lg shadow-primary/10">
+                    <Button type="submit" disabled={submitting || !formReason.trim() || !formType} className="w-full rounded-xl font-bold uppercase tracking-widest text-[11px] h-11 shadow-lg shadow-primary/10">
                       {submitting ? "Submitting..." : "Submit Request"}
                     </Button>
                   </DialogFooter>
@@ -372,7 +382,10 @@ export default function LeavesPage() {
                       </div>
                     )}
 
-                    <p className="text-[11px] text-muted-foreground/70 italic line-clamp-2">&quot;{leave.reason}&quot;</p>
+                    <div 
+                      className="text-[11px] text-muted-foreground/70 italic line-clamp-2 rich-text-content"
+                      dangerouslySetInnerHTML={{ __html: leave.reason }}
+                    />
                     
                     {canApprove && activeTab === 'team' && leave.status === 'Pending' && leave.employeeId !== session?.user?.employeeId && (
                       <div className="flex gap-2 pt-2">

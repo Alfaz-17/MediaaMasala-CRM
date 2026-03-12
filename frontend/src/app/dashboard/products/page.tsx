@@ -391,13 +391,24 @@ export default function ProductsPage() {
                         {product.status || "Active"}
                       </Badge>
                     </div>
-                    {product.productManager && (
-                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-semibold uppercase">
-                        <Users className="h-3.5 w-3.5" />
-                        {product.productManager.firstName} {product.productManager.lastName}
+                    <div 
+                        className="text-xs text-muted-foreground/80 line-clamp-2 min-h-[2.5rem] leading-relaxed rich-text-content"
+                        dangerouslySetInnerHTML={{ __html: product.description || "No specific technical documentation or scope details provided for this product asset." }}
+                      />
+                      
+                      <div className="flex items-center gap-2 pt-2 mt-auto border-t border-border/10">
+                         {product.productManager ? (
+                            <div className="flex items-center gap-2">
+                               <div className="w-6 h-6 rounded-md bg-primary/5 flex items-center justify-center text-primary font-bold text-[10px]">
+                                  {product.productManager.firstName.charAt(0)}
+                               </div>
+                               <span className="text-[10px] font-bold text-muted-foreground/60">{product.productManager.firstName} {product.productManager.lastName}</span>
+                            </div>
+                         ) : (
+                            <span className="text-[10px] font-bold text-muted-foreground/30 italic">Unassigned Manager</span>
+                         )}
                       </div>
-                    )}
-                  </div>
+                    </div>
                   <Button 
                     variant="outline" 
                     size="sm" 
