@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,6 +9,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { apiClient } from "@/lib/api-client"
 import { usePermissions } from "@/hooks/use-permissions"
+import { 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown, 
+  Search, 
+  Filter 
+} from "lucide-react"
+import { useDataTable } from "@/hooks/use-data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 
 interface Employee {
   id: number
@@ -34,6 +43,7 @@ export default function EmployeesPage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEmp, setEditingEmp] = useState<Employee | null>(null)
   const [isPromoting, setIsPromoting] = useState(false)
@@ -76,6 +86,38 @@ export default function EmployeesPage() {
   useEffect(() => {
     if (authStatus === "authenticated" && !permissionsLoading && isAdmin) fetchData()
   }, [authStatus, permissionsLoading, isAdmin])
+
+  const filteredEmployees = useMemo(() => {
+    const q = searchTerm.toLowerCase()
+    return employees.filter(emp => 
+      `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(q) ||
+      emp.email.toLowerCase().includes(q) ||
+      emp.empId.toLowerCase().includes(q) ||
+      emp.department.name.toLowerCase().includes(q) ||
+      emp.role.name.toLowerCase().includes(q)
+    )
+  }, [employees, searchTerm])
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    sortConfig,
+    handleSort,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = useDataTable<Employee>({
+    data: employees,
+    pageSize: 10,
+    searchFields: ["firstName", "lastName", "email", "empId"],
+    searchTerm: searchTerm
+  })
+
+  // Reset page on search
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, setCurrentPage])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,12 +191,23 @@ export default function EmployeesPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Staff List</h1>
           <p className="text-muted-foreground text-xs font-medium mt-1">View and manage your staff and departments here.</p>
         </div>
-        <Button 
-          onClick={() => { resetForm(); setIsModalOpen(true); }}
-          className="rounded-lg font-semibold text-xs h-9 px-4 shadow-lg shadow-primary/10"
-        >
-          Add Staff
-        </Button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+            <Input 
+              placeholder="Search staff..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-9 text-xs rounded-lg border-border/40 focus:ring-primary/40"
+            />
+          </div>
+          <Button 
+            onClick={() => { resetForm(); setIsModalOpen(true); }}
+            className="rounded-lg font-semibold text-xs h-9 px-4 shadow-lg shadow-primary/10"
+          >
+            Add Staff
+          </Button>
+        </div>
       </div>
 
       {pendingUsers.length > 0 && (
@@ -190,16 +243,52 @@ export default function EmployeesPage() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-muted/30 border-b border-border/40">
-              <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Employee</th>
-              <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">ID & Department</th>
+              <th 
+                className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort("firstName")}
+              >
+                <div className="flex items-center gap-2">
+                  Employee
+                  {sortConfig.key === "firstName" ? (
+                    sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  ) : (
+                    <ArrowUpDown className="h-3 w-3 opacity-30" />
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort("empId")}
+              >
+                <div className="flex items-center gap-2">
+                  ID & Department
+                  {sortConfig.key === "empId" ? (
+                    sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  ) : (
+                    <ArrowUpDown className="h-3 w-3 opacity-30" />
+                  )}
+                </div>
+              </th>
               <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Role</th>
               <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Reporting To</th>
-              <th className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">Status</th>
+              <th 
+                className="p-4 text-left text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort("user.isActive")}
+              >
+                <div className="flex items-center gap-2">
+                  Status
+                  {sortConfig.key === "user.isActive" ? (
+                    sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  ) : (
+                    <ArrowUpDown className="h-3 w-3 opacity-30" />
+                  )}
+                </div>
+              </th>
               <th className="p-4 text-right"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/20">
-            {employees.map((emp) => (
+            {paginatedData.map((emp) => (
               <tr key={emp.id} className="group border-b border-border/10">
                 <td className="p-4">
                   <div className="flex items-center gap-3">
@@ -238,6 +327,22 @@ export default function EmployeesPage() {
             ))}
           </tbody>
         </table>
+        
+        {paginatedData.length === 0 && (
+          <div className="py-20 text-center">
+            <p className="text-xs font-bold text-muted-foreground/40 uppercase tracking-widest">No matching staff found.</p>
+          </div>
+        )}
+
+        <div className="px-4">
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       {isModalOpen && (

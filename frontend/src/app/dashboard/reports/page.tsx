@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useSession } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { apiClient } from "@/lib/api-client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,8 +21,13 @@ import {
   Calendar,
   ChevronRight,
   TrendingDown,
-  LayoutGrid
+  LayoutGrid,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react"
+import { useDataTable } from "@/hooks/use-data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { ManagementFilters } from "@/components/dashboard/management-filters"
 import { cn } from "@/lib/utils"
 
@@ -61,6 +66,25 @@ export default function ReportsPage() {
     queryFn: () => apiClient.get('/reports/attendance', { params: commonParams }),
     enabled: status === "authenticated" && !permissionsLoading && canView("reports") && activeTab === 'attendance'
   })
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    sortConfig,
+    handleSort,
+    paginatedData: paginatedEmployees,
+    totalPages,
+    totalItems
+  } = useDataTable<any>({
+    data: productivityData?.employees || [],
+    pageSize: 10
+  })
+
+  // Reset page when switching tabs or filters
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, selectedDept, selectedEmp, isRecursive, setCurrentPage])
 
   const isLoading = salesLoading || productivityLoading || attendanceLoading
 
@@ -189,15 +213,75 @@ export default function ReportsPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-border/40">
-                        <th className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Member</th>
-                        <th className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Tasks</th>
-                        <th className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Done</th>
-                        <th className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">EODs</th>
-                        <th className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Efficiency</th>
+                        <th 
+                          className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest cursor-pointer hover:text-foreground transition-colors"
+                          onClick={() => handleSort("name")}
+                        >
+                          <div className="flex items-center gap-2">
+                            Member
+                            {sortConfig.key === "name" ? (
+                              sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 opacity-30" />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right cursor-pointer hover:text-foreground transition-colors"
+                          onClick={() => handleSort("totalTasks")}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Tasks
+                            {sortConfig.key === "totalTasks" ? (
+                              sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 opacity-30" />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right cursor-pointer hover:text-foreground transition-colors"
+                          onClick={() => handleSort("completedTasks")}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Done
+                            {sortConfig.key === "completedTasks" ? (
+                              sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 opacity-30" />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right cursor-pointer hover:text-foreground transition-colors"
+                          onClick={() => handleSort("eodReports")}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            EODs
+                            {sortConfig.key === "eodReports" ? (
+                              sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 opacity-30" />
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          className="py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right cursor-pointer hover:text-foreground transition-colors"
+                          onClick={() => handleSort("completionRate")}
+                        >
+                          <div className="flex items-center justify-end gap-2">
+                            Efficiency
+                            {sortConfig.key === "completionRate" ? (
+                              sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 opacity-30" />
+                            )}
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
-                      {productivityData?.employees.map((emp: any, i: number) => (
+                      {paginatedEmployees.map((emp: any, i: number) => (
                         <tr key={i} className="group hover:bg-muted/30 transition-colors">
                           <td className="py-4">
                             <div className="font-bold text-xs">{emp.name}</div>
@@ -219,6 +303,14 @@ export default function ReportsPage() {
                     </tbody>
                   </table>
                 </div>
+
+                <DataTablePagination 
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalItems}
+                  onPageChange={setCurrentPage}
+                />
               </CardContent>
             </Card>
           </div>

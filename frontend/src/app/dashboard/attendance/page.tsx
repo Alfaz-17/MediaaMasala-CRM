@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,11 @@ import { useQuery } from "@tanstack/react-query"
 import { usePermissions } from "@/hooks/use-permissions"
 import { ManagementFilters } from "@/components/dashboard/management-filters"
 import { PageSkeleton } from "@/components/dashboard/page-skeleton"
+import { useDataTable } from "@/hooks/use-data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface AttendanceRecord {
   id: number
@@ -40,6 +45,9 @@ export default function AttendancePage() {
   const [isRecursive, setIsRecursive] = useState<boolean>(false)
   const [selectedDate, setSelectedDate] = useState<string>("")
   const [currentEmployeeId, setCurrentEmployeeId] = useState<number | undefined>(session?.user?.employeeId)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  // No redundant records state here
 
   // Self-healing: Fetch employee ID if missing from session
   useEffect(() => {
@@ -58,7 +66,7 @@ export default function AttendancePage() {
     }
   }, [session, status])
 
-  const { data: records = [], isLoading, isFetching, refetch } = useQuery<AttendanceRecord[]>({
+  const { data: recordsData = [], isLoading, isFetching, refetch } = useQuery<AttendanceRecord[]>({
     queryKey: ["attendance", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = "/attendance?"
@@ -72,14 +80,34 @@ export default function AttendancePage() {
     enabled: status === "authenticated" && !permissionsLoading && canView("attendance"),
   })
 
-  const activeRecord = records.find((r: AttendanceRecord) => {
-    // Check if record is for current user AND has no checkout
-    // Use currentEmployeeId (from session or recovered)
+  // Filter records by date only (emp/dept filtered by server)
+  const filteredRecords = useMemo(() => {
+    return recordsData.filter(r => {
+      return !selectedDate || r.date.startsWith(selectedDate)
+    })
+  }, [recordsData, selectedDate])
+
+  const {
+    paginatedData,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    pageSize,
+    totalItems,
+    sortConfig,
+    handleSort,
+  } = useDataTable<AttendanceRecord>({
+    data: filteredRecords,
+    initialSort: { key: "date", direction: "desc" },
+    pageSize: 12,
+    searchFields: ["status", "location", "notes"],
+    searchTerm: searchTerm
+  })
+
+  const activeRecord = recordsData.find((r: AttendanceRecord) => {
     if (!currentEmployeeId) return false
     
     const isCurrentUser = r.employee?.id === currentEmployeeId
-    
-    // Check if record is from "today" (handle timezone differences by checking local date)
     const recordDate = new Date(r.date)
     const todayDate = new Date()
     const isSameDay = recordDate.getDate() === todayDate.getDate() &&
@@ -88,8 +116,6 @@ export default function AttendancePage() {
 
     return isCurrentUser && !r.checkOut && isSameDay
   })
-
-  // Debug check removed as it is now handled by recovery logic
 
   const handleCheckIn = async () => {
     setIsCheckingIn(true)
@@ -116,11 +142,6 @@ export default function AttendancePage() {
       setIsCheckingOut(false)
     }
   }
-
-  // Filter records by date only (emp/dept filtered by server)
-  const filteredRecords = records.filter(r => {
-    return !selectedDate || r.date.startsWith(selectedDate)
-  })
 
   return (
     <PermissionGuard module="attendance">
@@ -231,13 +252,49 @@ export default function AttendancePage() {
             )}
 
             {/* Attendance History */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">History</h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">History</h2>
+                </div>
+                
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative group/search max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 transition-colors group-focus-within/search:text-primary" />
+                    <Input
+                      placeholder="Search notes/location..."
+                      className="pl-9 h-10 w-full md:w-64 rounded-xl border-border/40 bg-card/50 text-xs font-medium focus:ring-1 focus:ring-primary/40 shadow-sm"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Select 
+                    value={sortConfig.key} 
+                    onValueChange={(val) => handleSort(val as any)}
+                  >
+                    <SelectTrigger className="h-10 w-40 rounded-xl border-border/40 bg-card/50 text-xs font-bold uppercase tracking-wider">
+                      <SelectValue placeholder="Sort By" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">📅 Date</SelectItem>
+                      <SelectItem value="status">🏷️ Status</SelectItem>
+                      <SelectItem value="checkIn">🕒 Check-In</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 rounded-xl border-border/40 bg-card/50"
+                    onClick={() => handleSort(sortConfig.key)}
+                  >
+                    {sortConfig.direction === "asc" ? "↑" : "↓"}
+                  </Button>
+                </div>
               </div>
 
-              {filteredRecords.length === 0 ? (
+              {paginatedData.length === 0 ? (
                 <Card className="border-dashed py-12">
                   <CardContent className="flex flex-col items-center justify-center text-center">
                     <div className="h-12 w-12 rounded-full bg-muted/20 flex items-center justify-center mb-4">
@@ -253,7 +310,7 @@ export default function AttendancePage() {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredRecords.map((record) => (
+                  {paginatedData.map((record) => (
                     <Card key={record.id} className="group border-border/40 hover:border-primary/20 transition-all overflow-hidden bg-card/50 backdrop-blur-sm">
                       <CardHeader className="pb-3 border-b border-border/20">
                         <div className="flex items-center justify-between">
@@ -305,10 +362,16 @@ export default function AttendancePage() {
                   ))}
                 </div>
               )}
-            </div>
-          </>
-        )}
-      </div>
+                <DataTablePagination 
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalItems}
+                  onPageChange={setCurrentPage}
+                />
+            </>
+          )}
+        </div>
     </PermissionGuard>
   )
 }

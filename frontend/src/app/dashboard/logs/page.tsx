@@ -9,10 +9,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { apiClient } from "@/lib/api-client"
-import { History, Search, Filter, Calendar, User, Activity, RotateCcw } from "lucide-react"
+import { History, Search, Filter, Calendar, User, Activity, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { toast } from "sonner"
 import { PermissionGuard } from "@/components/permission-guard"
 import { usePermissions } from "@/hooks/use-permissions"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 
 interface ActivityLog {
   id: number
@@ -35,19 +36,34 @@ export default function LogsPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const [sortBy, setSortBy] = useState("createdAt")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const { canView, isLoading: permissionsLoading } = usePermissions()
   const [selectedModule, setSelectedModule] = useState<string>("all")
   const [selectedAction, setSelectedAction] = useState<string>("all")
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all")
 
-  const fetchLogs = async (pageNum = 1, moduleFilter?: string) => {
+  const fetchLogs = async (pageNum = 1, modFilter?: string, sBy?: string, sOrder?: string) => {
     if (permissionsLoading || !canView("logs")) return
     setLoading(true)
     try {
-      const mod = moduleFilter !== undefined ? moduleFilter : (selectedModule !== "all" ? selectedModule : "")
-      const response = await apiClient.get(`/activity?page=${pageNum}&limit=50&module=${mod}`)
+      const mod = modFilter !== undefined ? modFilter : (selectedModule !== "all" ? selectedModule : "")
+      const finalSortBy = sBy || sortBy
+      const finalSortOrder = sOrder || sortOrder
+      
+      const response = await apiClient.get(`/activity`, {
+        params: {
+          page: String(pageNum),
+          limit: "50",
+          module: mod,
+          sortBy: finalSortBy,
+          sortOrder: finalSortOrder
+        }
+      })
       setLogs(response.data)
       setTotalPages(response.pagination.totalPages)
+      setTotalItems(response.pagination.total)
       setPage(pageNum)
     } catch (err) {
       console.error("Failed to fetch logs:", err)
@@ -55,6 +71,14 @@ export default function LogsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSort = (field: string) => {
+    const isAsc = sortBy === field && sortOrder === "asc"
+    const newOrder = isAsc ? "desc" : "asc"
+    setSortBy(field)
+    setSortOrder(newOrder)
+    fetchLogs(1, undefined, field, newOrder)
   }
 
   useEffect(() => {
@@ -94,7 +118,9 @@ export default function LogsPage() {
     setSelectedModule("all")
     setSelectedAction("all")
     setSelectedEmployee("all")
-    fetchLogs(1, "")
+    setSortBy("createdAt")
+    setSortOrder("desc")
+    fetchLogs(1, "", "createdAt", "desc")
   }
 
   const getActionColor = (action: string) => {
@@ -216,11 +242,59 @@ export default function LogsPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-muted/30 border-b border-border/30">
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Timestamp</th>
+                      <th 
+                        className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("createdAt")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Timestamp
+                          {sortBy === "createdAt" ? (
+                            sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
                       <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">User</th>
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Module</th>
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Action</th>
-                      <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Entity</th>
+                      <th 
+                        className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("module")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Module
+                          {sortBy === "module" ? (
+                            sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("action")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Action
+                          {sortBy === "action" ? (
+                            sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("entityName")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Entity
+                          {sortBy === "entityName" ? (
+                            sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
                       <th className="px-6 py-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Description</th>
                     </tr>
                   </thead>
@@ -264,27 +338,13 @@ export default function LogsPage() {
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center justify-between px-6 py-4 border-t border-border/30 bg-muted/10">
-                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                     Showing {filteredLogs.length} of {logs.length} • Page {page} of {totalPages}
-                   </p>
-                   <div className="flex gap-2">
-                    <Button 
-                     variant="outline" 
-                     size="sm" 
-                     disabled={page === 1}
-                     onClick={() => fetchLogs(page - 1)}
-                     className="h-8 rounded-lg text-xs"
-                    >Previous</Button>
-                    <Button 
-                     variant="outline" 
-                     size="sm" 
-                     disabled={page === totalPages}
-                     onClick={() => fetchLogs(page + 1)}
-                     className="h-8 rounded-lg text-xs"
-                    >Next</Button>
-                   </div>
-                </div>
+                <DataTablePagination 
+                  currentPage={page}
+                  totalPages={totalPages}
+                  pageSize={50}
+                  totalItems={totalItems}
+                  onPageChange={(p) => fetchLogs(p)}
+                />
               </div>
             )}
          </CardContent>

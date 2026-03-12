@@ -27,9 +27,14 @@ import {
   Package,
   ShoppingBag,
   ChevronRight,
-  Trash2
+  Trash2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react"
 import { ViewToggle, ViewType } from "@/components/dashboard/view-toggle"
+import { useDataTable } from "@/hooks/use-data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { 
   Card, 
   CardContent, 
@@ -208,14 +213,29 @@ export default function TasksPage() {
         filtered = filtered.filter(t => t.priority === selectedPriority)
     }
 
-    return filtered.filter(task => 
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.lead?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.project?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.product?.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  }, [tasks, searchQuery, selectedStatus, selectedPriority])
+    return filtered;
+  }, [tasks, selectedStatus, selectedPriority])
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    sortConfig,
+    handleSort,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = useDataTable<Task>({
+    data: filteredTasks,
+    pageSize: 10,
+    searchFields: ["title", "description"],
+    searchTerm: searchQuery
+  })
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedStatus, selectedPriority, selectedDeptId, selectedEmployeeId, isRecursive, setCurrentPage])
 
   if (status === "loading" || isLoading || permissionsLoading) return (
     <PermissionGuard module="tasks" action="view">
@@ -351,16 +371,64 @@ export default function TasksPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-muted/30 border-b border-border/40 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
-                      <th className="px-6 py-4">Context</th>
-                      <th className="px-6 py-4">Priority</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Deadline</th>
+                      <th 
+                        className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("title")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Context
+                          {sortConfig.key === "title" ? (
+                            sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("priority")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Priority
+                          {sortConfig.key === "priority" ? (
+                            sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("status")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Status
+                          {sortConfig.key === "status" ? (
+                            sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("dueDate")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Deadline
+                          {sortConfig.key === "dueDate" ? (
+                            sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
                       <th className="px-6 py-4">Assignee</th>
                       <th className="px-6 py-4 text-right">Reference</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/10">
-                    {filteredTasks.map((task) => {
+                    {paginatedData.map((task) => {
                       const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'Completed'
                       const canDeleteTask = isAdmin || (canDeletePermission && (
                         deleteScope === 'all' || 
@@ -445,7 +513,7 @@ export default function TasksPage() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 @container/tasks">
-              {filteredTasks.map((task) => {
+              {paginatedData.map((task) => {
                 const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'Completed'
                 return (
                   <Card key={task.id} className="shadow-sm bg-background group border-border/40 rounded-lg overflow-hidden hover:border-primary/20 transition-all duration-300">
@@ -547,15 +615,13 @@ export default function TasksPage() {
 
         {/* Registry Manifest Footer */}
         {!isLoading && filteredTasks.length > 0 && (
-          <div className="flex items-center justify-between py-6 border-t border-border/40 mt-8">
-             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest opacity-50">
-              Task List: <span className="text-foreground/70 font-bold tabular-nums">{filteredTasks.length} Items</span>
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="h-9 px-3 font-semibold text-[9px] rounded-lg border-border/50" disabled>Previous</Button>
-              <Button variant="outline" size="sm" className="h-9 px-3 font-semibold text-[9px] rounded-lg border-border/50" disabled>Next</Button>
-            </div>
-          </div>
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+          />
         )}
         </div>
       </div>

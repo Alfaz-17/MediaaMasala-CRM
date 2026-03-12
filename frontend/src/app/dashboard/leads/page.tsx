@@ -21,9 +21,14 @@ import {
   MoreHorizontal, 
   Filter,
   Loader2,
-  RefreshCcw 
+  RefreshCcw,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react"
 import { ViewToggle, ViewType } from "@/components/dashboard/view-toggle"
+import { useDataTable } from "@/hooks/use-data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -150,17 +155,30 @@ export default function LeadsPage() {
   }
 
   const filteredLeads = useMemo(() => {
-    let filtered = localLeads;
-    if (selectedStatus !== "all") {
-        filtered = filtered.filter(l => l.status === selectedStatus)
-    }
-    const q = searchTerm.toLowerCase();
-    return filtered.filter(lead => 
-      lead.name.toLowerCase().includes(q) ||
-      lead.email.toLowerCase().includes(q) ||
-      lead.company?.toLowerCase().includes(q)
-    )
-  }, [localLeads, searchTerm, selectedStatus])
+    if (selectedStatus === "all") return localLeads;
+    return localLeads.filter(l => l.status === selectedStatus)
+  }, [localLeads, selectedStatus])
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    sortConfig,
+    handleSort,
+    paginatedData,
+    totalPages,
+    totalItems
+  } = useDataTable<Lead>({
+    data: filteredLeads,
+    pageSize: 10,
+    searchFields: ["name", "email", "company"],
+    searchTerm: searchTerm
+  })
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedStatus, selectedDeptId, selectedEmployeeId, isRecursive, setCurrentPage])
 
   if (status === "loading" || isLoading || permissionsLoading) {
     return <PageSkeleton />
@@ -268,14 +286,50 @@ export default function LeadsPage() {
                 <table className="w-full text-left">
                   <thead className="bg-muted/50 border-b">
                     <tr>
-                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Lead</th>
-                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Company</th>
-                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th 
+                        className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("name")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Lead
+                          {sortConfig.key === "name" ? (
+                            sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("company")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Company
+                          {sortConfig.key === "company" ? (
+                            sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort("status")}
+                      >
+                        <div className="flex items-center gap-2">
+                          Status
+                          {sortConfig.key === "status" ? (
+                            sortConfig.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-30" />
+                          )}
+                        </div>
+                      </th>
                       <th className="px-4 py-2 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {filteredLeads.map((lead) => (
+                    {paginatedData.map((lead) => (
                       <tr key={lead.id} className={cn("hover:bg-muted/30 transition-none border-l-4", getStatusColor(lead.status))}>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
@@ -321,7 +375,7 @@ export default function LeadsPage() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredLeads.map((lead) => (
+                {paginatedData.map((lead) => (
                   <Card key={lead.id} className={cn("shadow-none border hover:border-primary/50 transition-none border-l-4", getStatusColor(lead.status))}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
@@ -375,6 +429,14 @@ export default function LeadsPage() {
             </div>
           )}
         </div>
+
+        <DataTablePagination 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setCurrentPage}
+        />
 
         <AlertDialog open={!!deletingLead} onOpenChange={(open) => !open && setDeletingLead(null)}>
           <AlertDialogContent>

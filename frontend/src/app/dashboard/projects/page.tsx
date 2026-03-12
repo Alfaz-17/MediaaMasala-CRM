@@ -13,6 +13,9 @@ import { PermissionGuard } from "@/components/permission-guard"
 import { useQuery } from "@tanstack/react-query"
 import { ManagementFilters } from "@/components/dashboard/management-filters"
 import { toast } from "sonner"
+import { useDataTable } from "@/hooks/use-data-table"
+import { DataTablePagination } from "@/components/ui/data-table-pagination"
+import { Search } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -89,8 +92,8 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
 
-  // Task Context (Managed by useQuery now)
   const [viewTasksProject, setViewTasksProject] = useState<Project | null>(null)
 
   // Employee list for PM/RM selector
@@ -101,7 +104,7 @@ export default function ProjectsPage() {
   const [formDescription, setFormDescription] = useState<string>("")
   const [formStatus, setFormStatus] = useState<string>("Active")
 
-  const { data: projects = [], isLoading, isFetching, refetch } = useQuery<Project[]>({
+  const { data: projectsData = [], isLoading, isFetching, refetch } = useQuery<Project[]>({
     queryKey: ["projects", session?.user?.email, selectedDeptId, selectedEmployeeId, isRecursive],
     queryFn: async () => {
       let endpoint = "/projects?"
@@ -113,6 +116,23 @@ export default function ProjectsPage() {
       return await apiClient.get(endpoint)
     },
     enabled: status === "authenticated" && !permissionsLoading && canView("projects"),
+  })
+
+  const {
+    paginatedData,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    pageSize,
+    totalItems,
+    sortConfig,
+    handleSort,
+  } = useDataTable<Project>({
+    data: projectsData,
+    initialSort: { key: "createdAt", direction: "desc" },
+    pageSize: 9,
+    searchFields: ["name", "description", "status"],
+    searchTerm: searchTerm
   })
 
   // Fetch Tasks for Context (Optimized with server-side filtering)
@@ -231,7 +251,31 @@ export default function ProjectsPage() {
             <p className="text-muted-foreground text-sm font-medium mt-1">Manage client implementations and deployments.</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+             <div className="relative group/search grow max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 transition-colors group-focus-within/search:text-primary" />
+                <Input
+                  placeholder="Search projects..."
+                  className="pl-9 h-11 w-full rounded-xl border-border/40 bg-card/50 text-xs font-medium focus:ring-1 focus:ring-primary/40 shadow-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+             </div>
+
+             <Select 
+                value={sortConfig.key} 
+                onValueChange={(val) => handleSort(val as any)}
+              >
+                <SelectTrigger className="h-11 w-40 rounded-xl border-border/40 bg-card/50 text-xs font-bold uppercase tracking-wider">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">📅 Created Date</SelectItem>
+                  <SelectItem value="name">📋 Name</SelectItem>
+                  <SelectItem value="status">🏷️ Status</SelectItem>
+                </SelectContent>
+              </Select>
+
              <ManagementFilters 
                 module="projects"
                 selectedDept={selectedDeptId}
@@ -360,7 +404,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {projects.length === 0 ? (
+        {projectsData.length === 0 ? (
           <Card className="border-dashed py-20 bg-card/10">
             <CardContent className="flex flex-col items-center justify-center text-center">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 border border-primary/20">
@@ -380,18 +424,19 @@ export default function ProjectsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none relative' : ''}`}>
-             
-             {isFetching && !isLoading && (
-                <div className="absolute inset-0 z-50 flex items-start justify-center pt-24">
-                   <div className="bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-primary/20 flex items-center gap-2">
-                     <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                     <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Updating...</span>
-                   </div>
-                </div>
-              )}
+          <div className="space-y-6">
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity duration-300 ${isFetching && !isLoading ? 'opacity-60 pointer-events-none relative' : ''}`}>
+               
+               {isFetching && !isLoading && (
+                  <div className="absolute inset-0 z-50 flex items-start justify-center pt-24">
+                     <div className="bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-primary/20 flex items-center gap-2">
+                       <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                       <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Updating...</span>
+                     </div>
+                  </div>
+                )}
 
-            {projects.map((project) => (
+              {paginatedData.map((project) => (
               <Card key={project.id} className="group hover:border-primary/40 hover:shadow-md transition-all cursor-pointer overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm relative flex flex-col" onClick={() => router.push(`/dashboard/projects/${project.id}`)}>
                 <CardHeader className="p-6 pb-3">
                   <div className="flex items-start justify-between gap-2">
@@ -489,6 +534,15 @@ export default function ProjectsPage() {
               </Card>
             ))}
           </div>
+          
+          <DataTablePagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+          />
+        </div>
         )}
 
         {/* Project Tasks Dialog */}

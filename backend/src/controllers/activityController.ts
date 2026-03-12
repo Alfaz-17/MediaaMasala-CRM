@@ -4,7 +4,7 @@ import { getModuleWhereClause } from '../utils/permissionUtils';
 
 export const getActivityLogs = async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const { module, entityId, page = 1, limit = 50 } = req.query;
+  const { module, entityId, page = 1, limit = 50, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
   try {
     // 1. Apply RBAC Scope using Centralized Utility
@@ -17,6 +17,11 @@ export const getActivityLogs = async (req: Request, res: Response) => {
     if (module) whereClause.module = module;
     if (entityId) whereClause.entityId = entityId.toString();
 
+    // 3. Dynamic Sorting
+    const allowedSortFields = ['createdAt', 'module', 'action', 'entityName'];
+    const finalSortBy = allowedSortFields.includes(sortBy as string) ? sortBy as string : 'createdAt';
+    const finalSortOrder = (sortOrder as string).toLowerCase() === 'asc' ? 'asc' : 'desc';
+
     const logs = await (prisma as any).activityLog.findMany({
       where: whereClause,
       include: {
@@ -27,7 +32,7 @@ export const getActivityLogs = async (req: Request, res: Response) => {
           }
         }
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { [finalSortBy]: finalSortOrder },
       skip: (Number(page) - 1) * Number(limit),
       take: Number(limit)
     });
