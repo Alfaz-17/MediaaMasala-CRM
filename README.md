@@ -1,103 +1,198 @@
-# Media Masala CRM
+# 💼 Media Masala CRM — Enterprise Production CRM System
 
-A full-featured Customer Relationship Management system built for the media production industry.
+[![Live Project](https://img.shields.io/badge/Live-crm.mediaamasala.com-00C853?style=for-the-badge&logo=google-chrome&logoColor=white)](https://crm.mediaamasala.com)
+[![GitHub License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](https://github.com/Alfaz-17/MediaaMasala-CRM)
+[![Next.js](https://img.shields.io/badge/Next.js%2014-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Prisma](https://img.shields.io/badge/Prisma%20ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io)
+[![NextAuth](https://img.shields.io/badge/NextAuth.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=yellow)](https://next-auth.js.org)
 
-## Features
+An enterprise-grade Customer Relationship Management (CRM) system engineered for the media production industry. Used daily by ~10–12 staff members to manage sales pipelines, HR workflows, projects, tasks, and analytics.
 
-- **Sales Pipeline** — Lead generation, tracking, assignment, and conversion
-- **Project Management** — Project lifecycle from lead conversion to completion
-- **Task Management** — Task creation, assignment, tracking, and completion
-- **Product Catalog** — Product registry with categorization
-- **HR Operations** — Employee attendance, leave management, and EOD reporting
-- **Analytics & Reports** — Sales funnel, productivity, and attendance analytics
-- **Administration** — Employee onboarding, role management, and permission configuration
+---
 
-## Tech Stack
+## 🌟 Architectural Features & Design Patterns
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14 + React 18 + TypeScript |
-| Styling | Tailwind CSS |
-| Backend | Node.js + Express.js |
-| Database | PostgreSQL (Neon.tech) |
-| ORM | Prisma 5 |
-| Auth | NextAuth.js + JWT |
+### 1. 🔑 4-Level Hierarchical Role-Based Access Control (RBAC)
+* **Roles**: `Super Admin` ➔ `Admin/Manager` ➔ `Team Lead` ➔ `Employee`.
+* **Hierarchy Scoping**: Access tokens control query scoping. Employees see only their assigned records; Team Leads see their team's records; Admins and Super Admins have global access.
+* **Token Implementation**: Secure session state managed via **NextAuth.js** using encrypted JWTs containing user role, team, and department metadata.
 
-## Getting Started
+### 2. 🗄️ Relational Database Schema Design
+* **Engine & ORM**: PostgreSQL database hosted on **Neon.tech** and queried using **Prisma 5 ORM**.
+* **Normalization**: The schema includes relations for `Users`, `Roles`, `Teams`, `Leads`, `Projects`, `Tasks`, `Products`, and `Attendance` records.
+* **Integrity**: Enforces cascading delete/update constraints, database-level indexes on frequently filtered fields (`lead.status`, `task.dueDate`), and transaction rollbacks during lead-to-project conversions.
 
-### Prerequisites
+### 3. 📊 Analytics Dashboard & Reporting
+* **Performance Indicators**: Renders real-time business metrics including sales funnels, project milestones, employee billing hours, and attendance logs.
+* **UI Componentry**: Rich widgets built with Tailwind CSS, supporting interactive charts and CSV exports for executive summary reports.
 
-- Node.js 18+
-- PostgreSQL database (or [Neon.tech](https://neon.tech) account)
+---
 
-### Setup
+## 🏗️ System Architecture
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mediamasaala-max/MediaaMasala-CRM.git
-   cd MediaaMasala-CRM
-   ```
+```mermaid
+graph TD
+    Client[Next.js 14 Frontend] -->|Auth Sessions| NextAuth[NextAuth.js + JWT]
+    Client -->|REST API Requests| Express[Node.js/Express.js Backend]
+    Express -->|Prisma Queries| Neon[(PostgreSQL - Neon.tech)]
+    Express -->|Verify Token| JWT[JWT Validation Layer]
+    Express -->|Enforce Hierarchy| RBAC[RBAC Scoping Filter]
+```
 
-2. **Backend Setup**
-   ```bash
-   cd backend
-   npm install
-   cp .env.example .env   # Configure your DATABASE_URL, JWT_SECRET
-   npx prisma migrate dev
-   npx prisma db seed
-   npm run dev
-   ```
+---
 
-3. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   cp .env.example .env   # Configure NEXT_PUBLIC_API_URL, NEXTAUTH_SECRET
-   npm run dev
-   ```
+## 📂 Codebase Directory Structure
 
-4. **Access the app** at `http://localhost:3000`
+```bash
+MediaaMasala-CRM/
+├── backend/
+│   ├── prisma/
+│   │   ├── schema.prisma       # Database schema definition
+│   │   └── seed.js             # Seed script for roles, teams, & users
+│   ├── src/
+│   │   ├── config/             # DB & authentication environment config
+│   │   ├── controllers/        # Controllers for Leads, Attendance, Projects
+│   │   ├── middlewares/        # Authentication and RBAC scoping middlewares
+│   │   ├── routes/             # REST endpoints (auth, users, leads, etc.)
+│   │   └── index.ts            # API Server bootstrap
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── app/                # Next.js 14 App Router layout & pages
+│   │   ├── components/         # Dashboard layouts, charts, modals
+│   │   ├── hooks/              # Custom React hooks (fetch, validation)
+│   │   └── lib/                # API Client and helper utils
+│   └── package.json
+├── Documentations/             # Detailed guides & manual testing plans
+└── README.md
+```
 
-### Default Login
+---
 
-| Field | Value |
-|-------|-------|
-| Email | `superadmin@media-masala.com` |
-| Password | `Password@123` |
+## 📊 Database Schema Design (Prisma)
 
-## Environment Variables
+Here is a simplified view of the schema relations defined in [schema.prisma](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/backend/prisma/schema.prisma):
 
-### Backend
+```prisma
+model User {
+  id          Int          @id @default(autoincrement())
+  email       String       @unique
+  password    String
+  name        String
+  roleId      Int
+  role        Role         @relation(fields: [roleId], references: [id])
+  teamId      Int?
+  team        Team?        @relation(fields: [teamId], references: [id])
+  leads       Lead[]       @relation("AssignedLeads")
+  tasks       Task[]       @relation("AssignedTasks")
+  attendance  Attendance[]
+}
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret key for JWT signing |
-| `PORT` | Server port (default: 4000) |
-| `ALLOWED_ORIGINS` | Comma-separated allowed CORS origins |
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique // SuperAdmin, Admin, TeamLead, Employee
+  users       User[]
+}
 
-### Frontend
+model Team {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  users       User[]
+  leads       Lead[]
+}
 
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Backend API URL (e.g. `http://localhost:4000/api`) |
-| `NEXTAUTH_URL` | Frontend base URL |
-| `NEXTAUTH_SECRET` | NextAuth session encryption key |
+model Lead {
+  id          Int          @id @default(autoincrement())
+  title       String
+  status      String       // New, Contacted, Qualified, Proposal, Won, Lost
+  assignedTo  User?        @relation("AssignedLeads", fields: [userId], references: [id])
+  userId      Int?
+  teamId      Int?
+  team        Team?        @relation(fields: [teamId], references: [id])
+  project     Project?
+}
 
-## Deployment
+model Project {
+  id          Int          @id @default(autoincrement())
+  name        String
+  leadId      Int          @unique
+  lead        Lead         @relation(fields: [leadId], references: [id])
+  status      String       // InProgress, OnHold, Completed
+  tasks       Task[]
+}
+```
 
-- **Backend** → [Render](https://render.com) (Node.js)
-- **Frontend** → [Vercel](https://vercel.com) (Next.js)
+---
 
-See [full system documentation](Doumentations/Media_Masala_CRM_System_Documentation.md) for detailed deployment instructions.
+## 📡 API Reference
 
-## Documentation
+### Auth & User Routes
+* **`POST /api/auth/login`**: Authenticates user credentials and issues JWT token.
+* **`GET /api/users/profile`**: Returns current profile & permission scopes.
 
-Full documentation is available in the [`Doumentations/`](Doumentations/) directory:
-- [System Documentation](Doumentations/Media_Masala_CRM_System_Documentation.md) — Complete API reference, database design, RBAC, and deployment guide
-- [Hierarchy Scoping](Doumentations/Hierarchy_Scoping_Explained.md) — How team/department scoping works
-- [Testing Guide](Doumentations/Sales_Hierarchy_Manual_Testing.md) — Manual testing procedures
+### Leads & CRM Pipeline
+* **`GET /api/leads`**: Fetches leads scoped by user hierarchy (Employee vs Team Lead vs Admin).
+* **`POST /api/leads`**: Registers a new incoming sales lead.
+* **`PUT /api/leads/:id/convert`**: Promotes a Qualified lead to a Project (DB transaction).
 
-## License
+### HR & Attendance Routes
+* **`POST /api/attendance/clock-in`**: Creates attendance record with timestamp.
+* **`POST /api/attendance/clock-out`**: Updates attendance record and EOD details.
+* **`GET /api/attendance/summary`**: Returns monthly reports for managers.
 
-Proprietary — Media Masala © 2026
+---
+
+## ⚙️ Installation & Setup
+
+### 1. Prerequisites
+* Node.js (v18 or higher)
+* PostgreSQL instance (Neon.tech or local)
+* Git client
+
+### 2. Configure Backend `.env`
+Create a `.env` file in the `/backend` folder:
+```env
+PORT=4000
+DATABASE_URL="postgresql://user:password@ep-neon-db.neon.tech/mediamasala?sslmode=require"
+JWT_SECRET="your-jwt-signing-key"
+ALLOWED_ORIGINS="http://localhost:3000"
+```
+
+### 3. Run Backend Server
+```bash
+cd backend
+npm install
+npx prisma db push
+npx prisma db seed # Seeds roles and default SuperAdmin user
+npm run dev
+```
+
+### 4. Configure Frontend `.env`
+Create a `.env` file in the `/frontend` folder:
+```env
+NEXT_PUBLIC_API_URL="http://localhost:4000/api"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-nextauth-encryption-secret"
+```
+
+### 5. Run Frontend Client
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🔒 Default Login Credentials
+For manual testing and verification, use the following seeded account:
+* **Email**: `superadmin@media-masala.com`
+* **Password**: `Password@123`
+
+---
+
+## 📄 Documentation Links
+* [Full System Architecture Specification](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Media_Masala_CRM_System_Documentation.md)
+* [Hierarchy Scoping Protocol & Rules](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Hierarchy_Scoping_Explained.md)
+* [Manual QA Testing Guide](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Sales_Hierarchy_Manual_Testing.md)
