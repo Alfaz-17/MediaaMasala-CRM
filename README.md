@@ -164,7 +164,7 @@ ALLOWED_ORIGINS="http://localhost:3000"
 cd backend
 npm install
 npx prisma db push
-npx prisma db seed # Seeds roles and default SuperAdmin user
+npm run seed:demo # Seeds all departments, roles, test accounts, and 50+ leads for demo
 npm run dev
 ```
 

@@ -122,6 +122,49 @@ function LoginForm() {
         >
           {isClearing ? "Clearing Session..." : loading ? "Signing in..." : "Sign In"}
         </Button>
+
+        <div className="w-full pt-2 border-t border-muted/50 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground text-center">Demo Accounts (Click to Auto-fill):</p>
+          <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { setEmail("superadmin@media-masala.com"); setPassword("Password@123"); }}
+              className="text-[11px] py-1 h-auto font-medium"
+            >
+              👑 Super Admin
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { setEmail("mediaamasala@gmail.com"); setPassword("mediaa@crm07"); }}
+              className="text-[11px] py-1 h-auto font-medium"
+            >
+              💼 Admin
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { setEmail("darshraj@gmail.com"); setPassword("Password@123"); }}
+              className="text-[11px] py-1 h-auto font-medium"
+            >
+              📈 Sales BDE
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { setEmail("bhargavmg@gmail.com"); setPassword("Password@123"); }}
+              className="text-[11px] py-1 h-auto font-medium"
+            >
+              🛠️ Product Manager
+            </Button>
+          </div>
+        </div>
+
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link href="/auth/register" className="font-bold text-primary underline-offset-4">
