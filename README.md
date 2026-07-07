@@ -186,9 +186,109 @@ npm run dev
 ---
 
 ## 🔒 Default Login Credentials
-For manual testing and verification, use the following seeded account:
-* **Email**: `superadmin@media-masala.com`
-* **Password**: `Password@123`
+
+For manual testing and verification, you can use the following seeded accounts. 
+Password for all accounts (except `mediaamasala@gmail.com`) is **`Password@123`**.
+
+### 1. System Administrators (Global Scope)
+* **Super Admin**: `superadmin@media-masala.com` (Password: `Password@123`)
+* **Admin**: `mediaamasala@gmail.com` (Password: `mediaa@crm07`)
+
+### 2. Department & Role Hierarchies
+Here are representative test accounts for demonstrating the 4-level Hierarchical RBAC:
+
+| Department | Role | Email | Password |
+|---|---|---|---|
+| **Administration** | Admin | `superadmin@media-masala.com` | `Password@123` |
+| **Administration** | Admin | `mediaamasala@gmail.com` | `mediaa@crm07` |
+| **Administration** | HR Manager | `raviparmar11102001@gmail.com` | `Password@123` |
+| **Sales** | Business Development Executive (BDE) | `darshraj@gmail.com` | `Password@123` |
+| **Sales** | Relationship Manager (RM) | `kiranchoudhary5931@gmail.com` | `Password@123` |
+| **Product** | Product Manager (PM) | `bhargavmg@gmail.com` | `Password@123` |
+| **Product** | Product Architect (PROD_ARC) | `alfazb@gmail.com` | `Password@123` |
+| **Creative** | Head of Creative | `krishishah@gmail.com` | `Password@123` |
+| **Creative** | UI/UX Designer | `danish@gmail.com` | `Password@123` |
+| **Operations** | Operations Manager (OM) | `rpdesigner36@gmail.com` | `Password@123` |
+| **Project** | Project Manager (PROJ_M) | `jaiswaltanu1705@gmail.com` | `Password@123` |
+
+---
+
+## 🧪 Manual Testing & Demo Guide
+
+To explain and demonstrate the CRM during your interview, follow these testing scenarios:
+
+### Scenario 1: Hierarchical RBAC Verification (Leads & Tasks Scoping)
+1. **Login as Admin** (`superadmin@media-masala.com` / `Password@123`):
+   - Navigate to the **Leads** or **Tasks** module.
+   - Verify you can see all records in the system across all departments.
+2. **Login as a BDE** (`darshraj@gmail.com` / `Password@123`):
+   - Navigate to **Leads**.
+   - Verify that this employee only sees their own assigned leads (scoping prevents seeing other employees' leads).
+3. **Login as a Product Manager** (`bhargavmg@gmail.com` / `Password@123`):
+   - Navigate to **Products**.
+   - Verify you can manage products and see tasks specific to the Product department.
+
+### Scenario 2: HR Workflow (Attendance & Leave Request)
+1. **Clock-In**:
+   - Login as any user (e.g. `danish@gmail.com` / `Password@123`).
+   - Click **Clock In** on the dashboard. Verify that it logs the current time and location.
+2. **Apply for Leave**:
+   - Go to the **Leaves** tab and click **Request Leave**.
+   - Fill in details (type, dates, reason) and submit.
+3. **Approve Leave**:
+   - Login as Admin (`superadmin@media-masala.com` / `Password@123`).
+   - Go to **Leaves** -> **Pending Requests**.
+   - Approve the leave request, and verify that the status changes to **Approved**.
+
+### Scenario 3: Daily EOD Reporting
+1. **Submit EOD**:
+   - Login as `danish@gmail.com` / `Password@123`.
+   - Go to **EOD Reports** and click **Submit EOD**.
+   - Verify that your EOD report appears in your list.
+2. **Review EOD**:
+   - Login as Admin.
+   - Go to **Reports** -> **EOD Reports** to view submissions from all staff.
+
+---
+
+## 🚀 Deployment Guide
+
+Follow these steps to deploy the project to production on **Vercel** and **Render**:
+
+### 1. Database Setup (Production)
+Choose a PostgreSQL provider (e.g., **Neon.tech**, **Supabase**, or **Render PostgreSQL**).
+1. Create a database instance and copy the connection string (`DATABASE_URL`).
+2. Run database migrations to initialize tables:
+   ```bash
+   cd backend
+   DATABASE_URL="your-production-database-url" npx prisma migrate deploy
+   ```
+
+### 2. Backend Deployment on Render
+1. Create a new **Web Service** on Render and connect your repository.
+2. Configure settings:
+   - **Root Directory**: `backend`
+   - **Environment/Language**: `Node`
+   - **Build Command**: `npm install && npx prisma generate && npm run build`
+   - **Start Command**: `node dist/server.js`
+3. Add the following **Environment Variables**:
+   - `DATABASE_URL`: `your-production-postgresql-url`
+   - `JWT_SECRET`: `your-secure-jwt-secret-string`
+   - `ALLOWED_ORIGINS`: `https://your-frontend.vercel.app`
+   - `NODE_ENV`: `production`
+   - `PORT`: `4000`
+
+### 3. Frontend Deployment on Vercel
+1. Create a new project on Vercel and import your repository.
+2. Configure settings:
+   - **Root Directory**: `frontend`
+   - **Framework Preset**: `Next.js`
+   - **Build Command**: `npm run build`
+3. Add the following **Environment Variables**:
+   - `NEXT_PUBLIC_API_URL`: `https://your-backend.onrender.com/api`
+   - `NEXTAUTH_URL`: `https://your-frontend.vercel.app`
+   - `NEXTAUTH_SECRET`: `your-secure-nextauth-secret-string` (Generate using `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+4. Click **Deploy**.
 
 ---
 

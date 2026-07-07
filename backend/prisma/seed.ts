@@ -102,7 +102,26 @@ async function main() {
         roleId: adminRole.id,
       },
     });
-    console.log('✅ Admin account created');
+
+    const superAdminEmail = 'superadmin@media-masala.com';
+    const superAdminPasswordHash = await bcrypt.hash('Password@123', 10);
+
+    const superAdminUser = await prisma.user.create({
+      data: { email: superAdminEmail, passwordHash: superAdminPasswordHash },
+    });
+
+    await prisma.employee.create({
+      data: {
+        empId: 'EMP000',
+        userId: superAdminUser.id,
+        firstName: 'Super',
+        lastName: 'Admin',
+        email: superAdminEmail,
+        departmentId: adminDept.id,
+        roleId: adminRole.id,
+      },
+    });
+    console.log('✅ Admin and SuperAdmin accounts created');
 
     console.log('');
     console.log('🚀 Production Seeding Complete!');
