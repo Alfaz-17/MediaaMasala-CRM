@@ -11,6 +11,22 @@ An enterprise-grade Customer Relationship Management (CRM) system engineered for
 
 ---
 
+## 🖥️ Application Screenshots
+
+### 📊 Real-Time Analytics & Dashboard
+![System Dashboard](./Screen%20Shots/Screenshot%202026-08-01%20140129.png)
+
+### 🔐 Granular Role-Based Access Control (RBAC) Matrix
+![App Permissions Matrix](./Screen%20Shots/Screenshot%202026-08-01%20140206.png)
+
+### 📦 Software Products Directory
+![Software Products Management](./Screen%20Shots/Screenshot%202026-08-01%20140145.png)
+
+### ⚙️ System Configuration Settings
+![System Settings](./Screen%20Shots/Screenshot%202026-08-01%20140217.png)
+
+---
+
 ## 🌟 Architectural Features & Design Patterns
 
 ### 1. 🔑 4-Level Hierarchical Role-Based Access Control (RBAC)
