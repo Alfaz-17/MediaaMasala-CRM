@@ -1,47 +1,49 @@
 # 💼 Media Masala CRM — Enterprise Production CRM System
 
-[![Live Project](https://img.shields.io/badge/Live-crm.mediaamasala.com-00C853?style=for-the-badge&logo=google-chrome&logoColor=white)](https://crm.mediaamasala.com)
-[![GitHub License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](https://github.com/Alfaz-17/MediaaMasala-CRM)
-[![Next.js](https://img.shields.io/badge/Next.js%2014-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+<div align="center">
+
+[![Live Project](https://img.shields.io/badge/Live_App-crm.mediaamasala.com-00C853?style=for-the-badge&logo=google-chrome&logoColor=white)](https://crm.mediaamasala.com)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](https://github.com/Alfaz-17/MediaaMasala-CRM)
+[![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![Prisma](https://img.shields.io/badge/Prisma%20ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io)
+[![Prisma](https://img.shields.io/badge/Prisma_5-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io)
 [![NextAuth](https://img.shields.io/badge/NextAuth.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=yellow)](https://next-auth.js.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-An enterprise-grade Customer Relationship Management (CRM) system engineered for the media production industry. Used daily by ~10–12 staff members to manage sales pipelines, HR workflows, projects, tasks, and analytics.
+**An enterprise-grade Customer Relationship & Resource Management System custom-engineered for media production companies.**  
+*Powers daily sales pipelines, team hierarchies, HR attendance tracking, project lifecycle workflows, and real-time business analytics.*
 
----
+[Explore Live Demo](https://crm.mediaamasala.com) • [API Documentation](#-api-reference) • [Setup Guide](#-installation--setup) • [Test Accounts](#-default-login-credentials)
 
-## 🖥️ Application Screenshots
-
-### 📊 Real-Time Analytics & Dashboard
-![System Dashboard](./Screen%20Shots/Screenshot%202026-08-01%20140129.png)
-
-### 🔐 Granular Role-Based Access Control (RBAC) Matrix
-![App Permissions Matrix](./Screen%20Shots/Screenshot%202026-08-01%20140206.png)
-
-### 📦 Software Products Directory
-![Software Products Management](./Screen%20Shots/Screenshot%202026-08-01%20140145.png)
-
-### ⚙️ System Configuration Settings
-![System Settings](./Screen%20Shots/Screenshot%202026-08-01%20140217.png)
+</div>
 
 ---
 
-## 🌟 Architectural Features & Design Patterns
+## 💡 System Overview
 
-### 1. 🔑 4-Level Hierarchical Role-Based Access Control (RBAC)
-* **Roles**: `Super Admin` ➔ `Admin/Manager` ➔ `Team Lead` ➔ `Employee`.
-* **Hierarchy Scoping**: Access tokens control query scoping. Employees see only their assigned records; Team Leads see their team's records; Admins and Super Admins have global access.
-* **Token Implementation**: Secure session state managed via **NextAuth.js** using encrypted JWTs containing user role, team, and department metadata.
+**Media Masala CRM** solves multi-department operational fragmentation by centralizing lead distribution, employee scoping, daily attendance logging, project conversion, and executive analytics into a unified web platform. Designed for production teams (~10–50 employees), it features a granular **4-Level Hierarchical Role-Based Access Control (RBAC)** model ensuring absolute data isolation across roles.
 
-### 2. 🗄️ Relational Database Schema Design
-* **Engine & ORM**: PostgreSQL database hosted on **Neon.tech** and queried using **Prisma 5 ORM**.
-* **Normalization**: The schema includes relations for `Users`, `Roles`, `Teams`, `Leads`, `Projects`, `Tasks`, `Products`, and `Attendance` records.
-* **Integrity**: Enforces cascading delete/update constraints, database-level indexes on frequently filtered fields (`lead.status`, `task.dueDate`), and transaction rollbacks during lead-to-project conversions.
+### 🌟 Key Platform Highlights
+- **🔒 Hierarchical Data Scoping**: Automatic query filtering enforcing record-level visibility (`SuperAdmin` ➔ `Admin/Manager` ➔ `Team Lead` ➔ `Employee`).
+- **📈 End-to-End Sales Pipeline**: Full lead lifecycle tracking, automated lead-to-project conversions via transactional DB operations.
+- **⏱️ HR & Attendance System**: Live clock-in/clock-out timestamps, geo/IP logging, leave application approvals, and monthly summary metrics.
+- **📝 Automated EOD Reporting**: Structured daily end-of-day submission workflows for staff and review panels for department heads.
+- **💼 Products & Portfolio Directory**: Product catalog, client project milestones, task assignments, and budget metrics.
 
-### 3. 📊 Analytics Dashboard & Reporting
-* **Performance Indicators**: Renders real-time business metrics including sales funnels, project milestones, employee billing hours, and attendance logs.
-* **UI Componentry**: Rich widgets built with Tailwind CSS, supporting interactive charts and CSV exports for executive summary reports.
+---
+
+## 🖥️ Interactive Screenshots
+
+| Analytics & Executive Dashboard | RBAC & Permission Matrix |
+| :---: | :---: |
+| ![System Dashboard](./Screen%20Shots/Screenshot%202026-08-01%20140129.png) | ![App Permissions Matrix](./Screen%20Shots/Screenshot%202026-08-01%20140206.png) |
+| *Real-time metrics, lead pipelines & activity logs* | *Role-based resource permissions & route scoping* |
+
+| Software Products Catalog | System Configuration Settings |
+| :---: | :---: |
+| ![Software Products Management](./Screen%20Shots/Screenshot%202026-08-01%20140145.png) | ![System Settings](./Screen%20Shots/Screenshot%202026-08-01%20140217.png) |
+| *Product listings & team allocation* | *Global app configurations & department settings* |
 
 ---
 
@@ -49,46 +51,96 @@ An enterprise-grade Customer Relationship Management (CRM) system engineered for
 
 ```mermaid
 graph TD
-    Client[Next.js 14 Frontend] -->|Auth Sessions| NextAuth[NextAuth.js + JWT]
-    Client -->|REST API Requests| Express[Node.js/Express.js Backend]
-    Express -->|Prisma Queries| Neon[(PostgreSQL - Neon.tech)]
-    Express -->|Verify Token| JWT[JWT Validation Layer]
-    Express -->|Enforce Hierarchy| RBAC[RBAC Scoping Filter]
+    subgraph Client ["Frontend Layer (Next.js 14 App Router)"]
+        UI[UI Components & Dashboard Pages]
+        AuthClient[NextAuth.js Session Provider]
+    end
+
+    subgraph Security ["Security & Auth Layer"]
+        JWT[Encrypted JWT Bearer Tokens]
+        RBAC[Hierarchical RBAC Middleware]
+    end
+
+    subgraph Backend ["Backend API Layer (Express.js + TypeScript)"]
+        Routes[REST API Endpoints]
+        Controllers[Business Logic Controllers]
+        Prisma[Prisma ORM Client]
+    end
+
+    subgraph Storage ["Database Layer"]
+        Neon[(PostgreSQL Database on Neon.tech)]
+    end
+
+    UI -->|Session Handshake| AuthClient
+    UI -->|Authenticated REST Requests| Routes
+    Routes --> JWT
+    JWT --> RBAC
+    RBAC --> Controllers
+    Controllers --> Prisma
+    Prisma --> Neon
 ```
 
 ---
 
-## 📂 Codebase Directory Structure
+## 🔑 4-Level Hierarchical RBAC Model
+
+The system strictly enforces data isolation at the API middleware layer:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 1. Super Admin  : Global access across all departments   │
+├─────────────────────────────────────────────────────────┤
+│ 2. Admin/Manager: Department-wide & cross-team oversight │
+├─────────────────────────────────────────────────────────┤
+│ 3. Team Lead    : Scoped exclusively to assigned team   │
+├─────────────────────────────────────────────────────────┤
+│ 4. Employee     : Scoped exclusively to self-owned data  │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **Query Injection**: Middleware injects user role, department ID, and team ID into Prisma dynamic query filters (`where: { userId: currentUserId }`).
+- **Token Security**: Tokens are signed using secret keys with automated expiration and refresh handling via NextAuth.
+
+---
+
+## 📂 Repository Structure
 
 ```bash
 MediaaMasala-CRM/
 ├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma       # Database schema definition
-│   │   └── seed.js             # Seed script for roles, teams, & users
+│   │   ├── migrations/         # PostgreSQL schema migration histories
+│   │   ├── schema.prisma       # Prisma ORM models & relationships
+│   │   ├── seed.ts             # Department & default user seeds
+│   │   └── seed_demo.ts        # Comprehensive demo seed data (50+ leads)
 │   ├── src/
-│   │   ├── config/             # DB & authentication environment config
-│   │   ├── controllers/        # Controllers for Leads, Attendance, Projects
-│   │   ├── middlewares/        # Authentication and RBAC scoping middlewares
-│   │   ├── routes/             # REST endpoints (auth, users, leads, etc.)
-│   │   └── index.ts            # API Server bootstrap
-│   └── package.json
+│   │   ├── config/             # DB & auth environment configurations
+│   │   ├── controllers/        # Lead, Project, Task, Attendance logic
+│   │   ├── middleware/         # Auth verification & RBAC scoping engine
+│   │   ├── routes/             # REST endpoints (auth, leads, tasks, etc.)
+│   │   ├── utils/              # Permission checks, loggers, custom errors
+│   │   └── server.ts           # Express server bootstrap
+│   ├── package.json
+│   └── tsconfig.json
 ├── frontend/
 │   ├── src/
-│   │   ├── app/                # Next.js 14 App Router layout & pages
-│   │   ├── components/         # Dashboard layouts, charts, modals
-│   │   ├── hooks/              # Custom React hooks (fetch, validation)
-│   │   └── lib/                # API Client and helper utils
-│   └── package.json
-├── Documentations/             # Detailed guides & manual testing plans
+│   │   ├── app/                # Next.js 14 App Router layout & views
+│   │   ├── components/         # UI components, data tables, modals, cards
+│   │   ├── hooks/              # Custom React hooks (permissions, table filters)
+│   │   ├── lib/                # API client, NextAuth configuration, utils
+│   │   └── types/              # NextAuth & API response type definitions
+│   ├── package.json
+│   └── tailwind.config.ts
+├── Doumentations/              # Comprehensive System Spec & QA Guides
+├── Screen Shots/               # Dashboard screenshots & UI assets
 └── README.md
 ```
 
 ---
 
-## 📊 Database Schema Design (Prisma)
+## 📊 Relational Database Schema (Prisma)
 
-Here is a simplified view of the schema relations defined in [schema.prisma](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/backend/prisma/schema.prisma):
+Below is an overview of the core Prisma schema relationships defined in [`schema.prisma`](file:///c:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/backend/prisma/schema.prisma):
 
 ```prisma
 model User {
@@ -103,19 +155,13 @@ model User {
   leads       Lead[]       @relation("AssignedLeads")
   tasks       Task[]       @relation("AssignedTasks")
   attendance  Attendance[]
+  eodReports  EodReport[]
 }
 
 model Role {
   id          Int          @id @default(autoincrement())
   name        String       @unique // SuperAdmin, Admin, TeamLead, Employee
   users       User[]
-}
-
-model Team {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  users       User[]
-  leads       Lead[]
 }
 
 model Lead {
@@ -143,172 +189,146 @@ model Project {
 
 ## 📡 API Reference
 
-### Auth & User Routes
-* **`POST /api/auth/login`**: Authenticates user credentials and issues JWT token.
-* **`GET /api/users/profile`**: Returns current profile & permission scopes.
+### 🔐 Authentication & Profile
+| Method | Endpoint | Access Level | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | Public | Authenticates credentials and issues JWT token |
+| `GET` | `/api/auth/me` | Authenticated | Retrieves active user profile and permission scope |
 
-### Leads & CRM Pipeline
-* **`GET /api/leads`**: Fetches leads scoped by user hierarchy (Employee vs Team Lead vs Admin).
-* **`POST /api/leads`**: Registers a new incoming sales lead.
-* **`PUT /api/leads/:id/convert`**: Promotes a Qualified lead to a Project (DB transaction).
+### 📈 Leads & Sales Pipeline
+| Method | Endpoint | Access Level | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/leads` | Scoped | Lists leads filtered by hierarchical user permissions |
+| `POST` | `/api/leads` | Employee+ | Registers a new sales lead in the system |
+| `PUT` | `/api/leads/:id` | Assigned / Admin | Updates lead details or status pipeline stage |
+| `PUT` | `/api/leads/:id/convert` | Manager+ | Converts a Qualified Lead into a Project (DB Transaction) |
 
-### HR & Attendance Routes
-* **`POST /api/attendance/clock-in`**: Creates attendance record with timestamp.
-* **`POST /api/attendance/clock-out`**: Updates attendance record and EOD details.
-* **`GET /api/attendance/summary`**: Returns monthly reports for managers.
+### ⏱️ HR, Attendance & EOD
+| Method | Endpoint | Access Level | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/attendance/clock-in` | Authenticated | Logs clock-in timestamp and IP location |
+| `POST` | `/api/attendance/clock-out` | Authenticated | Logs clock-out timestamp and daily summary |
+| `POST` | `/api/eod` | Authenticated | Submits Daily End-of-Day report |
+| `GET` | `/api/reports/eod` | Manager+ | Views EOD reports submitted across departments |
 
 ---
 
-## ⚙️ Installation & Setup
+## ⚙️ Installation & Local Setup
 
 ### 1. Prerequisites
-* Node.js (v18 or higher)
-* PostgreSQL instance (Neon.tech or local)
-* Git client
+- **Node.js**: `v18.x` or higher
+- **Package Manager**: `npm` (v9+)
+- **Database**: PostgreSQL (Hosted on [Neon.tech](https://neon.tech) or Local Instance)
 
-### 2. Configure Backend `.env`
-Create a `.env` file in the `/backend` folder:
-```env
-PORT=4000
-DATABASE_URL="postgresql://user:password@ep-neon-db.neon.tech/mediamasala?sslmode=require"
-JWT_SECRET="your-jwt-signing-key"
-ALLOWED_ORIGINS="http://localhost:3000"
-```
-
-### 3. Run Backend Server
-```bash
-cd backend
-npm install
-npx prisma db push
-npm run seed:demo # Seeds all departments, roles, test accounts, and 50+ leads for demo
-npm run dev
-```
-
-### 4. Configure Frontend `.env`
-Create a `.env` file in the `/frontend` folder:
-```env
-NEXT_PUBLIC_API_URL="http://localhost:4000/api"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-nextauth-encryption-secret"
-```
-
-### 5. Run Frontend Client
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-
----
-
-## 🔒 Default Login Credentials
-
-For manual testing and verification, you can use the following seeded accounts. 
-Password for all accounts (except `mediaamasala@gmail.com`) is **`Password@123`**.
-
-### 1. System Administrators (Global Scope)
-* **Super Admin**: `superadmin@media-masala.com` (Password: `Password@123`)
-* **Admin**: `mediaamasala@gmail.com` (Password: `mediaa@crm07`)
-
-### 2. Department & Role Hierarchies
-Here are representative test accounts for demonstrating the 4-level Hierarchical RBAC:
-
-| Department | Role | Email | Password |
-|---|---|---|---|
-| **Administration** | Admin | `superadmin@media-masala.com` | `Password@123` |
-| **Administration** | Admin | `mediaamasala@gmail.com` | `mediaa@crm07` |
-| **Administration** | HR Manager | `raviparmar11102001@gmail.com` | `Password@123` |
-| **Sales** | Business Development Executive (BDE) | `darshraj@gmail.com` | `Password@123` |
-| **Sales** | Relationship Manager (RM) | `kiranchoudhary5931@gmail.com` | `Password@123` |
-| **Product** | Product Manager (PM) | `bhargavmg@gmail.com` | `Password@123` |
-| **Product** | Product Architect (PROD_ARC) | `alfazb@gmail.com` | `Password@123` |
-| **Creative** | Head of Creative | `krishishah@gmail.com` | `Password@123` |
-| **Creative** | UI/UX Designer | `danish@gmail.com` | `Password@123` |
-| **Operations** | Operations Manager (OM) | `rpdesigner36@gmail.com` | `Password@123` |
-| **Project** | Project Manager (PROJ_M) | `jaiswaltanu1705@gmail.com` | `Password@123` |
-
----
-
-## 🧪 Manual Testing & Demo Guide
-
-To explain and demonstrate the CRM during your interview, follow these testing scenarios:
-
-### Scenario 1: Hierarchical RBAC Verification (Leads & Tasks Scoping)
-1. **Login as Admin** (`superadmin@media-masala.com` / `Password@123`):
-   - Navigate to the **Leads** or **Tasks** module.
-   - Verify you can see all records in the system across all departments.
-2. **Login as a BDE** (`darshraj@gmail.com` / `Password@123`):
-   - Navigate to **Leads**.
-   - Verify that this employee only sees their own assigned leads (scoping prevents seeing other employees' leads).
-3. **Login as a Product Manager** (`bhargavmg@gmail.com` / `Password@123`):
-   - Navigate to **Products**.
-   - Verify you can manage products and see tasks specific to the Product department.
-
-### Scenario 2: HR Workflow (Attendance & Leave Request)
-1. **Clock-In**:
-   - Login as any user (e.g. `danish@gmail.com` / `Password@123`).
-   - Click **Clock In** on the dashboard. Verify that it logs the current time and location.
-2. **Apply for Leave**:
-   - Go to the **Leaves** tab and click **Request Leave**.
-   - Fill in details (type, dates, reason) and submit.
-3. **Approve Leave**:
-   - Login as Admin (`superadmin@media-masala.com` / `Password@123`).
-   - Go to **Leaves** -> **Pending Requests**.
-   - Approve the leave request, and verify that the status changes to **Approved**.
-
-### Scenario 3: Daily EOD Reporting
-1. **Submit EOD**:
-   - Login as `danish@gmail.com` / `Password@123`.
-   - Go to **EOD Reports** and click **Submit EOD**.
-   - Verify that your EOD report appears in your list.
-2. **Review EOD**:
-   - Login as Admin.
-   - Go to **Reports** -> **EOD Reports** to view submissions from all staff.
-
----
-
-## 🚀 Deployment Guide
-
-Follow these steps to deploy the project to production on **Vercel** and **Render**:
-
-### 1. Database Setup (Production)
-Choose a PostgreSQL provider (e.g., **Neon.tech**, **Supabase**, or **Render PostgreSQL**).
-1. Create a database instance and copy the connection string (`DATABASE_URL`).
-2. Run database migrations to initialize tables:
+### 2. Backend Setup
+1. Navigate to the backend directory:
    ```bash
    cd backend
-   DATABASE_URL="your-production-database-url" npx prisma migrate deploy
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file in `/backend`:
+   ```env
+   PORT=4000
+   DATABASE_URL="postgresql://user:password@ep-neon-db.neon.tech/mediamasala?sslmode=require"
+   JWT_SECRET="your-secure-jwt-secret-key"
+   ALLOWED_ORIGINS="http://localhost:3000"
+   ```
+4. Push Prisma schema & seed demo data:
+   ```bash
+   npx prisma db push
+   npm run seed:demo
+   ```
+5. Start the backend development server:
+   ```bash
+   npm run dev
    ```
 
-### 2. Backend Deployment on Render
-1. Create a new **Web Service** on Render and connect your repository.
-2. Configure settings:
-   - **Root Directory**: `backend`
-   - **Environment/Language**: `Node`
-   - **Build Command**: `npm install && npx prisma generate && npm run build`
-   - **Start Command**: `node dist/server.js`
-3. Add the following **Environment Variables**:
-   - `DATABASE_URL`: `your-production-postgresql-url`
-   - `JWT_SECRET`: `your-secure-jwt-secret-string`
-   - `ALLOWED_ORIGINS`: `https://your-frontend.vercel.app`
-   - `NODE_ENV`: `production`
-   - `PORT`: `4000`
-
-### 3. Frontend Deployment on Vercel
-1. Create a new project on Vercel and import your repository.
-2. Configure settings:
-   - **Root Directory**: `frontend`
-   - **Framework Preset**: `Next.js`
-   - **Build Command**: `npm run build`
-3. Add the following **Environment Variables**:
-   - `NEXT_PUBLIC_API_URL`: `https://your-backend.onrender.com/api`
-   - `NEXTAUTH_URL`: `https://your-frontend.vercel.app`
-   - `NEXTAUTH_SECRET`: `your-secure-nextauth-secret-string` (Generate using `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
-4. Click **Deploy**.
+### 3. Frontend Setup
+1. Navigate to the frontend directory:
+   ```bash
+   cd ../frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file in `/frontend`:
+   ```env
+   NEXT_PUBLIC_API_URL="http://localhost:4000/api"
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your-secure-nextauth-encryption-secret"
+   ```
+4. Launch the frontend development server:
+   ```bash
+   npm run dev
+   ```
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 📄 Documentation Links
-* [Full System Architecture Specification](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Media_Masala_CRM_System_Documentation.md)
-* [Hierarchy Scoping Protocol & Rules](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Hierarchy_Scoping_Explained.md)
-* [Manual QA Testing Guide](file:///C:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Sales_Hierarchy_Manual_Testing.md)
+## 🔒 Default Test Accounts
+
+Use these seeded test accounts to test hierarchical access control:
+
+> [!NOTE]
+> Standard password for all seeded accounts (except Admin) is **`Password@123`**.
+
+| Department | Role | Email | Password | Scope Level |
+| :--- | :--- | :--- | :--- | :--- |
+| **Administration** | Super Admin | `superadmin@media-masala.com` | `Password@123` | Global System Access |
+| **Administration** | Admin | `mediaamasala@gmail.com` | `mediaa@crm07` | Global System Access |
+| **Administration** | HR Manager | `raviparmar11102001@gmail.com` | `Password@123` | HR & Staff Access |
+| **Sales** | BDE Executive | `darshraj@gmail.com` | `Password@123` | Assigned Leads Only |
+| **Sales** | Relationship Manager | `kiranchoudhary5931@gmail.com` | `Password@123` | Team Scoped Access |
+| **Product** | Product Architect | `alfazb@gmail.com` | `Password@123` | Product & Spec Access |
+| **Creative** | UI/UX Designer | `danish@gmail.com` | `Password@123` | Creative Team Access |
+| **Project** | Project Manager | `jaiswaltanu1705@gmail.com` | `Password@123` | Project Portfolio Scoped |
+
+---
+
+## 🧪 Manual QA Testing Scenarios
+
+### Scenario 1: RBAC Hierarchy Scoping
+1. Log in as **Super Admin** (`superadmin@media-masala.com`). Verify full visibility of all leads, tasks, and system settings across departments.
+2. Log in as **BDE Executive** (`darshraj@gmail.com`). Verify that only sales leads assigned specifically to this user are displayed in the Leads view.
+
+### Scenario 2: Attendance & Leave Workflow
+1. Log in as **UI/UX Designer** (`danish@gmail.com`). Click **Clock In** on the dashboard header.
+2. Navigate to **Leaves** -> **Request Leave** and submit a vacation request.
+3. Log in as **Super Admin**, navigate to **Leaves** -> **Pending Requests**, and approve the request.
+
+---
+
+## 🚀 Production Deployment
+
+### 1. Database Migrations
+```bash
+cd backend
+DATABASE_URL="your-production-postgresql-url" npx prisma migrate deploy
+```
+
+### 2. Render Deployment (Backend Service)
+- **Root Directory**: `backend`
+- **Build Command**: `npm install && npx prisma generate && npm run build`
+- **Start Command**: `node dist/server.js`
+
+### 3. Vercel Deployment (Frontend Next.js)
+- **Root Directory**: `frontend`
+- **Framework Preset**: `Next.js`
+- **Build Command**: `npm run build`
+
+---
+
+## 📄 Deep Documentation Links
+- 📘 [Full System Architecture Specification](file:///c:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Media_Masala_CRM_System_Documentation.md)
+- 🔒 [Hierarchy Scoping Protocol & Middleware Rules](file:///c:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Hierarchy_Scoping_Explained.md)
+- 🧪 [Manual QA Testing Suite](file:///c:/Users/alfaz/OneDrive/Desktop/Media-masala%20projects/Mediaa-masala-CRM/Doumentations/Sales_Hierarchy_Manual_Testing.md)
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ by Media Masala Engineering Team • Built for scale</sub>
+</div>
